@@ -1,8 +1,6 @@
 import { createLogger } from '@sub-rosa/logging';
+import { getSystemEnv } from '@sub-rosa/config';
 const diagnostics = createLogger("services.appraisal-api.scripts.usdc-setup");
-// USDC asset provisioning for the x402 e2e (classic ops via Horizon).
-// Trustlines for the payer (client) + resource server, and mint USDC to the
-// payer. The facilitator needs XLM only, so it gets no trustline.
 
 import {
   Asset,
@@ -15,13 +13,14 @@ import {
   xdr,
 } from "@stellar/stellar-sdk";
 
-const HORIZON_URL = process.env.HORIZON_URL ?? "https://horizon-testnet.stellar.org";
-const NETWORK = process.env.NETWORK_PASSPHRASE ?? Networks.TESTNET;
-const ASSET_CODE = process.env.ASSET_CODE ?? "USDC";
-const MINT_AMOUNT = process.env.MINT_AMOUNT ?? "1000";
+const env = getSystemEnv();
+const HORIZON_URL = env.HORIZON_URL ?? "https://horizon-testnet.stellar.org";
+const NETWORK = env.NETWORK_PASSPHRASE ?? Networks.TESTNET;
+const ASSET_CODE = env.ASSET_CODE ?? "USDC";
+const MINT_AMOUNT = env.MINT_AMOUNT ?? "1000";
 
 const reqEnv = (n: string): string => {
-  const v = process.env[n];
+  const v = env[n];
   if (!v) throw new Error(`missing required env var ${n}`);
   return v;
 };

@@ -1,6 +1,7 @@
 {
   "lineThresholdPercent": 70,
   "workspaces": [
+    "packages/config",
     "packages/sdk",
     "packages/tlock",
     "packages/round-bindings",

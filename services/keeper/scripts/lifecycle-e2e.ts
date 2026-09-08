@@ -35,9 +35,11 @@ import {
   sealBid,
 } from "@sub-rosa/tlock";
 import { systemTime } from "@sub-rosa/time";
+import { getSystemEnv } from "@sub-rosa/config";
 
 import { closeRound, keepRound } from "../src/keeper.js";
 
+const env = getSystemEnv();
 const { clock, scheduler } = systemTime;
 
 const DRAND_GENESIS = 1_692_803_367;
@@ -48,15 +50,15 @@ const DRAND_PUBKEY_C1C0 =
 const DRAND_NEGGEN_C1C0 =
   "13e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb813fa4d4a0ad8b1ce186ed5061789213d993923066dddaf1040bc3ff59f825c78df74f2d75467e25e0f55f8a00fa030ed0d1b3cc2c7027888be51d9ef691d77bcb679afda66c73f17f9ee3837a55024f78c71363275a75d75d86bab79f74782aa";
 
-const RPC_URL = process.env.RPC_URL ?? "https://soroban-testnet.stellar.org";
+const RPC_URL = env.RPC_URL ?? "https://soroban-testnet.stellar.org";
 const NETWORK =
-  process.env.NETWORK_PASSPHRASE ?? "Test SDF Network ; September 2015";
+  env.NETWORK_PASSPHRASE ?? "Test SDF Network ; September 2015";
 
 const hex = (s: string) => Buffer.from(s, "hex");
 const sha256 = (s: string) => createHash("sha256").update(s).digest();
 const sleep = (ms: number) => scheduler.sleep(ms);
 const reqEnv = (n: string): string => {
-  const v = process.env[n];
+  const v = env[n];
   if (!v) throw new Error(`missing required env var ${n}`);
   return v;
 };

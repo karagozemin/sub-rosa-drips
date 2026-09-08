@@ -1,5 +1,5 @@
-// Copyright (c) 2026 Sub Rosa contributors
 import { useMemo, useState } from "react";
+import { getBrowserEnv } from "@sub-rosa/config/browser";
 import { CAP_SAFETY_COPY } from "../demo/trace";
 import { useTime } from "../lib/time";
 import {
@@ -46,7 +46,8 @@ export function PasskeyPanel() {
   } | null>(null);
 
   const walletWasmHash = resolvePasskeyWalletWasmHash();
-  const rpId = import.meta.env.VITE_PASSKEY_RP_ID ?? window.location.hostname;
+  const env = getBrowserEnv();
+  const rpId = env.VITE_PASSKEY_RP_ID ?? window.location.hostname;
   const passkeyAvailable = useMemo(
     () =>
       typeof window !== "undefined" &&

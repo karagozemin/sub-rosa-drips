@@ -12,6 +12,7 @@
 import type { SubRosaClient } from "@sub-rosa/sdk";
 import type { DrandClient } from "@sub-rosa/tlock";
 import { resolveTimeContext, systemTime, type PartialTimeContext } from "@sub-rosa/time";
+import { getSystemEnv } from "@sub-rosa/config";
 
 import {
   discoverRoundIds,
@@ -52,13 +53,14 @@ function summarizeTick(t: WatchTickResult): string {
 }
 
 async function resolveRoundIds(reader: SubRosaClient): Promise<bigint[]> {
-  const spec = process.env.WATCH_ROUND_IDS?.trim();
+  const env = getSystemEnv();
+  const spec = env.WATCH_ROUND_IDS?.trim();
   if (spec) return parseRoundIdSpec(spec);
-  const single = process.env.ROUND_ID?.trim();
+  const single = env.ROUND_ID?.trim();
   if (single) return [BigInt(single)];
   return discoverRoundIds(reader, {
-    from: BigInt(process.env.WATCH_FROM ?? "1"),
-    maxProbe: Number(process.env.WATCH_MAX_ROUNDS ?? "64"),
+    from: BigInt(env.WATCH_FROM ?? "1"),
+    maxProbe: Number(env.WATCH_MAX_ROUNDS ?? "64"),
   });
 }
 

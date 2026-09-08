@@ -31,6 +31,7 @@ import { RoundContract, SubRosaClient } from "@sub-rosa/sdk";
 import { generateAuditorKeypair, quicknet } from "@sub-rosa/tlock";
 import { systemTime } from "@sub-rosa/time";
 import { buildAppraisalServer } from "@sub-rosa/appraisal-api";
+import { getSystemEnv } from "@sub-rosa/config";
 
 import {
   createSessionMandate,
@@ -41,6 +42,7 @@ import {
 } from "../src/index.js";
 import { writeDemoTrace } from "../src/write-demo-trace.js";
 
+const env = getSystemEnv();
 const DRAND_GENESIS = 1_692_803_367;
 const DRAND_PERIOD = 3;
 const DST = "BLS_SIG_BLS12381G1_XMD:SHA-256_SSWU_RO_NUL_";
@@ -49,10 +51,10 @@ const DRAND_PUBKEY_C1C0 =
 const DRAND_NEGGEN_C1C0 =
   "13e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb813fa4d4a0ad8b1ce186ed5061789213d993923066dddaf1040bc3ff59f825c78df74f2d75467e25e0f55f8a00fa030ed0d1b3cc2c7027888be51d9ef691d77bcb679afda66c73f17f9ee3837a55024f78c71363275a75d75d86bab79f74782aa";
 
-const RPC_URL = process.env.RPC_URL ?? "https://soroban-testnet.stellar.org";
-const HORIZON_URL = process.env.HORIZON_URL ?? "https://horizon-testnet.stellar.org";
-const NETWORK = process.env.NETWORK_PASSPHRASE ?? Networks.TESTNET;
-const X402_NETWORK = process.env.X402_NETWORK ?? "stellar:testnet";
+const RPC_URL = env.RPC_URL ?? "https://soroban-testnet.stellar.org";
+const HORIZON_URL = env.HORIZON_URL ?? "https://horizon-testnet.stellar.org";
+const NETWORK = env.NETWORK_PASSPHRASE ?? Networks.TESTNET;
+const X402_NETWORK = env.X402_NETWORK ?? "stellar:testnet";
 
 const { clock, scheduler } = systemTime;
 
@@ -60,7 +62,7 @@ const hex = (s: string) => Buffer.from(s, "hex");
 const sha256 = (s: string) => createHash("sha256").update(s).digest();
 const sleep = (ms: number) => scheduler.sleep(ms);
 const reqEnv = (n: string): string => {
-  const v = process.env[n];
+  const v = env[n];
   if (!v) throw new Error(`missing required env var ${n}`);
   return v;
 };
@@ -171,7 +173,7 @@ async function main() {
   const issuerSecret = reqEnv("ISSUER_SECRET");
   const wasmHash = reqEnv("WASM_HASH");
   const usdcSac = reqEnv("USDC_SAC");
-  const appraisalPrice = Number(process.env.PRICE ?? "0.10");
+  const appraisalPrice = Number(env.PRICE ?? "0.10");
 
   const issuerKp = Keypair.fromSecret(issuerSecret);
   const asset = new Asset("USDC", issuerKp.publicKey());
@@ -461,9 +463,9 @@ async function main() {
     };
 
     await writeJson("artifacts/canonical-demo-trace.json", demoTrace);
-    if (process.env.SUB_ROSA_WRITE_WEB_TRACE !== "0") {
+    if (env.SUB_ROSA_WRITE_WEB_TRACE !== "0") {
       await writeDemoTrace(
-        process.env.SUB_ROSA_WEB_DEMO_TRACE_OUT ?? "apps/web/src/demo/demo-trace.generated.ts",
+        env.SUB_ROSA_WEB_DEMO_TRACE_OUT ?? "apps/web/src/demo/demo-trace.generated.ts",
         demoTrace,
       );
     }

@@ -24,13 +24,15 @@ import {
 import { appraise, parseAppraisalRequest } from "../src/appraisal.js";
 import { buildAppraisalServer } from "../src/server.js";
 import { createPaidFetch } from "../src/client.js";
+import { getSystemEnv } from "@sub-rosa/config";
 
-const RPC_URL = process.env.RPC_URL ?? "https://soroban-testnet.stellar.org";
-const NETWORK = process.env.NETWORK_PASSPHRASE ?? "Test SDF Network ; September 2015";
-const X402_NETWORK = process.env.X402_NETWORK ?? "stellar:testnet";
+const env = getSystemEnv();
+const RPC_URL = env.RPC_URL ?? "https://soroban-testnet.stellar.org";
+const NETWORK = env.NETWORK_PASSPHRASE ?? "Test SDF Network ; September 2015";
+const X402_NETWORK = env.X402_NETWORK ?? "stellar:testnet";
 
 const reqEnv = (n: string): string => {
-  const v = process.env[n];
+  const v = env[n];
   if (!v) throw new Error(`missing required env var ${n}`);
   return v;
 };
@@ -44,7 +46,7 @@ async function main() {
   const clientSecret = reqEnv("CLIENT_SECRET");
   const serverSecret = reqEnv("SERVER_SECRET");
   const usdcSac = reqEnv("USDC_SAC");
-  const price = Number(process.env.PRICE ?? "0.10");
+  const price = Number(env.PRICE ?? "0.10");
 
   const clientPub = Keypair.fromSecret(clientSecret).publicKey();
   const serverPub = Keypair.fromSecret(serverSecret).publicKey();

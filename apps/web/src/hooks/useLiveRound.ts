@@ -1,14 +1,15 @@
-// Copyright (c) 2026 Sub Rosa contributors
 import { useEffect, useState } from "react";
 import type { Round, BidState } from "@sub-rosa/sdk";
+import { getBrowserEnv } from "@sub-rosa/config/browser";
 import { useTime } from "../lib/time";
 
-const RPC = import.meta.env.VITE_RPC_URL ?? "https://soroban-testnet.stellar.org";
+const env = getBrowserEnv();
+const RPC = env.VITE_RPC_URL ?? "https://soroban-testnet.stellar.org";
 const NETWORK =
-  import.meta.env.VITE_NETWORK_PASSPHRASE ?? "Test SDF Network ; September 2015";
-const CONTRACT = import.meta.env.VITE_CONTRACT_ID as string | undefined;
-const ROUND_ID = import.meta.env.VITE_ROUND_ID
-  ? BigInt(import.meta.env.VITE_ROUND_ID)
+  env.VITE_NETWORK_PASSPHRASE ?? "Test SDF Network ; September 2015";
+const CONTRACT = env.VITE_CONTRACT_ID as string | undefined;
+const ROUND_ID = env.VITE_ROUND_ID
+  ? BigInt(env.VITE_ROUND_ID)
   : undefined;
 
 export interface LiveSnapshot {

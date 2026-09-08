@@ -1,6 +1,6 @@
-// Copyright (c) 2026 Sub Rosa contributors
 import type { BidState, Round, SubRosaClient } from "@sub-rosa/sdk";
 import { systemClock } from "@sub-rosa/time";
+import { getSystemEnv } from "@sub-rosa/config";
 
 import { VOID_GRACE_SECONDS } from "./keeper.js";
 
@@ -88,7 +88,7 @@ function parseMaxWaitSeconds(value: string | undefined): number {
 }
 
 export function parseKeeperRunConfig(
-  env: Record<string, string | undefined> = process.env,
+  env: Record<string, string | undefined> = getSystemEnv(),
 ): KeeperRunConfig {
   const dryRun = parseBooleanEnv(env.KEEPER_DRY_RUN, "KEEPER_DRY_RUN");
   const keeperSecret = env.KEEPER_SECRET?.trim() || undefined;

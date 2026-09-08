@@ -25,12 +25,14 @@ const diagnostics = createLogger("scripts.check-deploy-docs");
 
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { getSystemEnv } from "../packages/config/src/system.ts";
 
 // `DEPLOY_DOCS_ROOT` lets tests redirect reads to a fixture project tree.
 // In normal use, `pnpm docs:check` runs from the repo root, so process.cwd()
 // is the project root.
-const ROOT = process.env.DEPLOY_DOCS_ROOT
-  ? process.env.DEPLOY_DOCS_ROOT
+const env = getSystemEnv();
+const ROOT = env.DEPLOY_DOCS_ROOT
+  ? env.DEPLOY_DOCS_ROOT
   : process.cwd();
 
 const PATHS = {

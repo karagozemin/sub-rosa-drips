@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+import { getSystemEnv } from "@sub-rosa/config";
 import { SubRosaSubmitError } from "./errors.js";
 
 export interface SubmittedTransaction {
@@ -57,7 +57,7 @@ export function createOzChannelsSubmitter(config: OzChannelsSubmitterConfig): Tr
 }
 
 export function createOzChannelsSubmitterFromEnv(
-  env: Record<string, string | undefined> = process.env,
+  env: Record<string, string | undefined> = getSystemEnv(),
 ): TransactionSubmitter | undefined {
   const baseUrl = env.OZ_CHANNELS_BASE_URL ?? env.OZ_RELAYER_CHANNELS_URL;
   const apiKey = env.OZ_CHANNELS_API_KEY ?? env.OZ_RELAYER_API_KEY;

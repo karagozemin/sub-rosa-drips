@@ -1,15 +1,14 @@
 import { createLogger } from '@sub-rosa/logging';
+import { getSystemEnv } from '@sub-rosa/config';
 const diagnostics = createLogger("packages.sdk.scripts.mainnet-verify");
-// Read-only mainnet proof checker — no transactions, no secrets required.
-//
-// Verifies the deployed Round contract and settled round 1 match frozen artifacts.
 
 import { SubRosaClient } from "../src/client.js";
 import { MAINNET_ARTIFACTS } from "../src/mainnet-artifacts.js";
 import { verifySettledRoundProof } from "../src/mainnet-readiness.js";
 
 async function main() {
-  const dryRun = process.argv.includes("--dry-run") || process.env.MAINNET_DRY_RUN === "1";
+  const env = getSystemEnv();
+  const dryRun = process.argv.includes("--dry-run") || env.MAINNET_DRY_RUN === "1";
 
   diagnostics.info("sub-rosa-mainnet-settlement-proof-read-only", "Sub Rosa — mainnet settlement proof (read-only)\n");
   diagnostics.info("checklist", "Checklist:");
@@ -38,13 +37,13 @@ async function main() {
   }
 
   const reader = new SubRosaClient({
-    rpcUrl: process.env.RPC_URL ?? MAINNET_ARTIFACTS.rpcUrl,
-    networkPassphrase: process.env.NETWORK_PASSPHRASE ?? MAINNET_ARTIFACTS.networkPassphrase,
-    contractId: process.env.ROUND_CONTRACT_ID ?? MAINNET_ARTIFACTS.contractId,
-    publicKey: process.env.MAINNET_READER_PUBKEY ?? "GCDARJFKKSTJYAZC647H4ZSSSPXPPSKOWOHGMUNCT22VG74KXZ5BHVNR",
+    rpcUrl: env.RPC_URL ?? MAINNET_ARTIFACTS.rpcUrl,
+    networkPassphrase: env.NETWORK_PASSPHRASE ?? MAINNET_ARTIFACTS.networkPassphrase,
+    contractId: env.ROUND_CONTRACT_ID ?? MAINNET_ARTIFACTS.contractId,
+    publicKey: env.MAINNET_READER_PUBKEY ?? "GCDARJFKKSTJYAZC647H4ZSSSPXPPSKOWOHGMUNCT22VG74KXZ5BHVNR",
   });
 
-  const roundId = BigInt(process.env.ROUND_ID ?? String(MAINNET_ARTIFACTS.settledRoundId));
+  const roundId = BigInt(env.ROUND_ID ?? String(MAINNET_ARTIFACTS.settledRoundId));
   await verifySettledRoundProof(reader, roundId, {
     bidStroops: MAINNET_ARTIFACTS.bidStroops,
     escrowStroops: MAINNET_ARTIFACTS.escrowStroops,
@@ -52,7 +51,7 @@ async function main() {
   });
 
   diagnostics.info("mainnet-verify-passed", "✅ MAINNET VERIFY PASSED");
-  diagnostics.info("contract", "   contract:", { "value1_0": process.env.ROUND_CONTRACT_ID ?? MAINNET_ARTIFACTS.contractId });
+  diagnostics.info("contract", "   contract:", { "value1_0": env.ROUND_CONTRACT_ID ?? MAINNET_ARTIFACTS.contractId });
   diagnostics.info("round", "   round:   ", { "value1_0": roundId.toString(), "value2_1": "status:", "status_2": MAINNET_ARTIFACTS.status });
   diagnostics.info("r", "   R:       ", { "value1_0": MAINNET_ARTIFACTS.revealRound.toString() });
   diagnostics.info("bid", "   bid:     ", { "bidXlm_0": MAINNET_ARTIFACTS.bidXlm, "value2_1": "XLM" });

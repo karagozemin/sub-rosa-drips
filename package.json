@@ -81,6 +81,10 @@
     "receipt:typecheck": "pnpm --filter @sub-rosa/receipt-cli typecheck",
     "time:test": "pnpm --filter @sub-rosa/time test",
     "time:guard": "node scripts/check-direct-time-access.mjs",
-    "time:guard:test": "node --test scripts/check-direct-time-access.test.mjs"
+    "time:guard:test": "node --test scripts/check-direct-time-access.test.mjs",
+    "config:test": "pnpm --filter @sub-rosa/config test",
+    "config:typecheck": "pnpm --filter @sub-rosa/config typecheck",
+    "config:guard": "node scripts/check-direct-env-access.mjs",
+    "config:guard:test": "node --test scripts/check-direct-env-access.test.mjs"
   }
 }

@@ -16,18 +16,20 @@ import {
 } from "@sub-rosa/sdk";
 import { quicknet } from "@sub-rosa/tlock";
 import { systemTime } from "@sub-rosa/time";
+import { getSystemEnv } from "@sub-rosa/config";
 
 import { closeRound, keepRound } from "../src/keeper.js";
 
+const env = getSystemEnv();
 const { clock, scheduler } = systemTime;
 
-const RPC_URL = process.env.RPC_URL ?? "https://rpc.ankr.com/stellar_soroban";
+const RPC_URL = env.RPC_URL ?? "https://rpc.ankr.com/stellar_soroban";
 const NETWORK =
-  process.env.NETWORK_PASSPHRASE ??
+  env.NETWORK_PASSPHRASE ??
   "Public Global Stellar Network ; September 2015";
 
 function reqEnv(name: string): string {
-  const v = process.env[name];
+  const v = env[name];
   if (!v) throw new Error(`missing required env var ${name}`);
   return v;
 }
@@ -41,7 +43,7 @@ async function main() {
 
   const keeperSecret = reqEnv("KEEPER_SECRET");
   const contractId = reqEnv("ROUND_CONTRACT_ID");
-  const roundId = BigInt(process.env.ROUND_ID ?? "1");
+  const roundId = BigInt(env.ROUND_ID ?? "1");
   const keeperKp = Keypair.fromSecret(keeperSecret);
 
   const reader = new SubRosaClient({

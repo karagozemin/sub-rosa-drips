@@ -1,5 +1,5 @@
-// Copyright (c) 2026 Sub Rosa contributors
 import { createLogger, type Logger } from '@sub-rosa/logging';
+import { getSystemEnv } from '@sub-rosa/config';
 const diagnostics = createLogger("services.keeper.src.status-server");
 import http from "node:http";
 
@@ -158,8 +158,9 @@ function healthzHandler(
 }
 
 export function createStatusServer(config: StatusServerConfig): http.Server {
-  const host = config.host ?? process.env.KEEPER_STATUS_HOST ?? "127.0.0.1";
-  const port = config.port ?? Number(process.env.KEEPER_STATUS_PORT ?? "8090");
+  const env = getSystemEnv();
+  const host = config.host ?? env.KEEPER_STATUS_HOST ?? "127.0.0.1";
+  const port = config.port ?? Number(env.KEEPER_STATUS_PORT ?? "8090");
 
   const source: BuildStatusSource = {
     logger: config.logger,

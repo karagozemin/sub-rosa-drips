@@ -7,6 +7,7 @@ const diagnostics = createLogger("services.receipt-cli.src.index");
 import { readFileSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { SubRosaClient, parseReceipt, serializeReceipt, verifyReceipt, redactReceipt } from "@sub-rosa/sdk";
+import { getSystemEnv } from "@sub-rosa/config";
 import { buildJsonOutput } from "./json-output.js";
 
 function usage(): never {
@@ -29,12 +30,12 @@ Environment for "export":
   process.exit(1);
 }
 
-async function cmdExport(roundIdStr: string) {
+async function cmdExport(roundIdStr: string, env: Record<string, string | undefined> = getSystemEnv()) {
   const roundId = BigInt(roundIdStr);
-  const rpcUrl = process.env.RPC_URL ?? "https://soroban-testnet.stellar.org";
+  const rpcUrl = env.RPC_URL ?? "https://soroban-testnet.stellar.org";
   const networkPassphrase =
-    process.env.NETWORK_PASSPHRASE ?? "Test SDF Network ; September 2015";
-  const contractId = process.env.CONTRACT_ID;
+    env.NETWORK_PASSPHRASE ?? "Test SDF Network ; September 2015";
+  const contractId = env.CONTRACT_ID;
   if (!contractId) {
     diagnostics.error("contract-id-env-var-is-required-for-export", "CONTRACT_ID env var is required for export");
     process.exit(1);

@@ -25,6 +25,8 @@ export default defineConfig({
       events: require.resolve("events/"),
       "node:crypto": require.resolve("crypto-browserify"),
       "node:buffer": require.resolve("buffer/"),
+      "process/browser": require.resolve("process/browser"),
+      process: require.resolve("process/browser"),
     },
   },
   define: {

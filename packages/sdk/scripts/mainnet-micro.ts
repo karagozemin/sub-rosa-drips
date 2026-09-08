@@ -21,23 +21,25 @@ import {
   defaultMainnetReadinessInput,
   runMainnetReadiness,
 } from "../src/mainnet-readiness.js";
+import { getSystemEnv } from "@sub-rosa/config";
 import { generateAuditorKeypair, generateNonce, quicknet, sealBid } from "@sub-rosa/tlock";
 import { systemClock } from "@sub-rosa/time";
 
+const env = getSystemEnv();
 const DRAND_GENESIS = 1_692_803_367;
 const DRAND_PERIOD = 3;
 
-const DEFAULT_BID = 500_000n; // 0.05 XLM
-const DEFAULT_ESCROW = 1_000_000n; // 0.1 XLM
+const DEFAULT_BID = 500_000n;
+const DEFAULT_ESCROW = 1_000_000n;
 
 function reqEnv(name: string): string {
-  const v = process.env[name];
+  const v = env[name];
   if (!v) throw new Error(`missing required env var ${name}`);
   return v;
 }
 
 function parseStroops(name: string, fallback: bigint): bigint {
-  const raw = process.env[name];
+  const raw = env[name];
   if (!raw) return fallback;
   const v = BigInt(raw);
   if (v <= 0n) throw new Error(`${name} must be positive`);
@@ -49,7 +51,7 @@ function parseStroops(name: string, fallback: bigint): bigint {
 
 function printChecklist(bid: bigint, escrow: bigint, execute: boolean) {
   diagnostics.info("sub-rosa-mainnet-micro-runner", "Sub Rosa — mainnet micro runner\n");
-  diagnostics.info("contract-existing", "Contract (existing):", { "value1_0": process.env.ROUND_CONTRACT_ID ?? MAINNET_ARTIFACTS.contractId });
+  diagnostics.info("contract-existing", "Contract (existing):", { "value1_0": env.ROUND_CONTRACT_ID ?? MAINNET_ARTIFACTS.contractId });
   diagnostics.info("token-native-xlm-sac", "Token:               native XLM SAC");
   diagnostics.info("bid-stroops", "Bid (stroops):      ", { "value1_0": bid.toString(), "value2_1": `(${(Number(bid) / 1e7).toFixed(7)} XLM)` });
   diagnostics.info("escrow-stroops", "Escrow (stroops):   ", { "value1_0": escrow.toString(), "value2_1": `(${(Number(escrow) / 1e7).toFixed(7)} XLM)` });
@@ -83,16 +85,16 @@ async function main() {
     return;
   }
 
-  if (process.env.MAINNET_CONFIRM !== "SUB_ROSA_MAINNET") {
+  if (env.MAINNET_CONFIRM !== "SUB_ROSA_MAINNET") {
     throw new Error('set MAINNET_CONFIRM=SUB_ROSA_MAINNET to execute on mainnet');
   }
-  assertMainnetConfirmed();
+  assertMainnetConfirmed(env);
 
   const operatorSecret = reqEnv("OPERATOR_SECRET");
   const bidderSecret = reqEnv("BIDDER_SECRET");
-  const contractId = process.env.ROUND_CONTRACT_ID ?? MAINNET_ARTIFACTS.contractId;
-  const rpcUrl = process.env.RPC_URL ?? MAINNET_ARTIFACTS.rpcUrl;
-  const network = process.env.NETWORK_PASSPHRASE ?? MAINNET_ARTIFACTS.networkPassphrase;
+  const contractId = env.ROUND_CONTRACT_ID ?? MAINNET_ARTIFACTS.contractId;
+  const rpcUrl = env.RPC_URL ?? MAINNET_ARTIFACTS.rpcUrl;
+  const network = env.NETWORK_PASSPHRASE ?? MAINNET_ARTIFACTS.networkPassphrase;
 
   const operatorKp = Keypair.fromSecret(operatorSecret);
   const bidderKp = Keypair.fromSecret(bidderSecret);
