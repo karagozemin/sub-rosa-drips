@@ -53,13 +53,13 @@ export function BidderProgressCard({ data }: { data: DashboardData }) {
 
         {bidders.length > 0 && (
           <div className="dashboard-bidder-table-wrapper">
-            <table className="dashboard-bidder-table">
+            <table className="dashboard-bidder-table" aria-label="Bidder progress">
               <thead>
                 <tr>
-                  <th>Bidder</th>
-                  <th>Escrow</th>
-                  <th>Bid</th>
-                  <th>Status</th>
+                  <th scope="col">Bidder</th>
+                  <th scope="col">Escrow</th>
+                  <th scope="col">Bid</th>
+                  <th scope="col">Status</th>
                 </tr>
               </thead>
               <tbody>
