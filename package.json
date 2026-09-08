@@ -69,12 +69,10 @@
     "docs:check": "node scripts/check-deploy-docs.mjs",
     "docs:check-links": "node scripts/check-links.js",
     "coverage:test": "node --test scripts/run-ts-coverage.test.mjs && node scripts/run-ts-coverage.mjs",
-    "tlock:typecheck": "pnpm --filter @sub-rosa/tlock typecheck",
     "drand:test": "pnpm --filter @sub-rosa/drand-tools test",
     "drand:typecheck": "pnpm --filter @sub-rosa/drand-tools typecheck",
     "receipt:test": "pnpm --filter @sub-rosa/receipt-cli test",
     "receipt:typecheck": "pnpm --filter @sub-rosa/receipt-cli typecheck",
-    "template:test": "pnpm --filter @sub-rosa/auction-template test",
     "time:test": "pnpm --filter @sub-rosa/time test",
     "time:guard": "node scripts/check-direct-time-access.mjs",
     "time:guard:test": "node --test scripts/check-direct-time-access.test.mjs"
