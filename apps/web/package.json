@@ -8,7 +8,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node --import tsx --test src/demo/trace-health-check.test.ts src/lib/config.test.ts src/lib/chain.test.ts src/dashboard/fixture-health-check.test.ts src/lib/round-status.test.ts src/components/dashboard/RoundStatusCard.test.tsx src/hooks/useDashboardData.test.ts",
+    "test": "node --import tsx --test src/demo/trace-health-check.test.ts src/lib/config.test.ts src/lib/hex.test.ts src/lib/chain.test.ts src/dashboard/fixture-health-check.test.ts src/lib/round-status.test.ts src/components/dashboard/RoundStatusCard.test.tsx src/hooks/useDashboardData.test.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
