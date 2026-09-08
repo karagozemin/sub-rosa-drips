@@ -216,7 +216,7 @@ test("rejects invalid base64 string (evidence ciphertext)", () => {
   );
   assert.equal(result.valid, false);
   assert.equal(result.issues[0].code, "invalid_encoding");
-  assert.match(result.issues[0].message, /not valid hex or base64/);
+  assert.match(result.issues[0].message, /not valid base64 encoding/);
 });
 
 test("accepts 0x-prefixed hex evidence ciphertext", () => {
