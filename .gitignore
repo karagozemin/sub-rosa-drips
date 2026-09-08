@@ -35,3 +35,9 @@ deployments/*.local.json
 # Keeper
 .keeper-store.json
 .keeper-store.json.corrupted.*
+
+# Local coverage reports
+coverage/
+.nyc_output/
+*.lcov
+lcov.info
