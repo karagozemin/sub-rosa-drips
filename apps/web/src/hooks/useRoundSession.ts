@@ -1,4 +1,5 @@
 // Copyright (c) 2026 Sub Rosa contributors
+import { shortAddr } from "../lib/format";
 import { Buffer } from "buffer";
 import { useEffect, useState } from "react";
 import {
@@ -468,9 +469,4 @@ export function useRoundSession(active: UseCase) {
     openAndReveal,
     refresh,
   };
-}
-
-function shortAddr(addr: string, len = 6) {
-  if (addr.length <= len * 2 + 3) return addr;
-  return `${addr.slice(0, len)}…${addr.slice(-len)}`;
 }
