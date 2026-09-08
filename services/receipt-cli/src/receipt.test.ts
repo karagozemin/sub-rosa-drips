@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Sub Rosa contributors
 // Receipt verification tests with golden and tampered fixtures.
 
 import { test } from "node:test";

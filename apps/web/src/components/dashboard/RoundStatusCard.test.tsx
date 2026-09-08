@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Sub Rosa contributors
 import assert from "node:assert/strict";
 import test from "node:test";
 import { renderToStaticMarkup } from "react-dom/server";

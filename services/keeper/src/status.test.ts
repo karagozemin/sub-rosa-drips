@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Sub Rosa contributors
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { createFakeTime } from "@sub-rosa/time";

@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Sub Rosa contributors
 // Schema-fixture tests.
 //
 // These tests pin the *shape* and the *user-displayable error strings* of the

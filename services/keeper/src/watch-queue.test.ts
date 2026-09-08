@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Sub Rosa contributors
 import { describe, it } from "node:test";
 import * as assert from "node:assert";
 import * as fs from "node:fs";

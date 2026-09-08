@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Sub Rosa contributors
 // settlement-guard.test.ts
 //
 // Tests for Issue #79 — keeper duplicate-settlement suppression.
