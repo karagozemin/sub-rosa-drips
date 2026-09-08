@@ -1,5 +1,5 @@
-// Copyright (c) 2026 Sub Rosa contributors
 import { Keypair, StrKey } from "@stellar/stellar-sdk";
+import { ConfigError, getSystemEnv } from "@sub-rosa/config";
 import {
   DEFAULT_TESTNET_RPC_URL,
   STELLAR_PUBNET_CAIP2,
@@ -9,7 +9,7 @@ import {
 } from "@x402/stellar";
 import type { Network } from "@x402/core/types";
 
-export class AppraisalConfigError extends Error {
+export class AppraisalConfigError extends ConfigError {
   readonly name = "AppraisalConfigError";
 
   constructor(
@@ -17,7 +17,7 @@ export class AppraisalConfigError extends Error {
     message: string,
     options?: ErrorOptions,
   ) {
-    super(`${variable}: ${message}`, options);
+    super(variable, message, "MALFORMED", options);
   }
 }
 
@@ -171,7 +171,7 @@ function validateAsset(asset: string): void {
 }
 
 export function configFromEnv(
-  env: Record<string, string | undefined> = process.env,
+  env: Record<string, string | undefined> = getSystemEnv(),
 ): AppraisalServerConfig {
   const facilitatorSecret = requiredEnv(env, "FACILITATOR_SECRET");
   const payTo = requiredEnv(env, "PAY_TO");

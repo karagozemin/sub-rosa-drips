@@ -21,19 +21,22 @@ import { quicknet } from "@sub-rosa/tlock";
 import { createSettlementGuard } from "./settlement-guard.js";
 import { KeeperStore } from "./store.js";
 import { runWatchLoop } from "./watch-loop.js";
+import { getSystemEnv } from "@sub-rosa/config";
+
+const env = getSystemEnv();
 
 function reqEnv(name: string): string {
-  const v = process.env[name];
+  const v = env[name];
   if (!v) throw new Error(`missing required env var ${name}`);
   return v;
 }
 
 async function main() {
-  const pollMs = Number(process.env.WATCH_POLL_MS ?? "15000");
+  const pollMs = Number(env.WATCH_POLL_MS ?? "15000");
   const contractId = reqEnv("ROUND_CONTRACT_ID");
-  const rpcUrl = process.env.RPC_URL ?? "https://soroban-testnet.stellar.org";
+  const rpcUrl = env.RPC_URL ?? "https://soroban-testnet.stellar.org";
   const networkPassphrase =
-    process.env.NETWORK_PASSPHRASE ?? "Test SDF Network ; September 2015";
+    env.NETWORK_PASSPHRASE ?? "Test SDF Network ; September 2015";
   const keeperSecret = reqEnv("KEEPER_SECRET");
 
   const sdk = new SubRosaClient({

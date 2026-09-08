@@ -1,5 +1,5 @@
-// Copyright (c) 2026 Sub Rosa contributors
 import { createLogger, type Logger } from '@sub-rosa/logging';
+import { getSystemEnv } from '@sub-rosa/config';
 const diagnostics = createLogger("services.keeper.src.store");
 import * as fs from "fs";
 import * as path from "path";
@@ -64,7 +64,7 @@ export class KeeperStore {
 
   constructor(storePath?: string, private readonly logger: Logger = diagnostics) {
     this.storePath =
-      storePath || process.env.KEEPER_STORE_PATH || ".keeper-store.json";
+      storePath || getSystemEnv().KEEPER_STORE_PATH || ".keeper-store.json";
     this.data = this.loadStore();
   }
 

@@ -4,12 +4,14 @@ const diagnostics = createLogger("services.drand-tools.src.vectors");
 // Emit a frozen quicknet test vector for the contract's Rust BLS test.
 // Real network data captured at a fixed finalized round — not a mock.
 
+import { getSystemEnv } from "@sub-rosa/config";
 import { getBeacon, getChainInfo } from "./quicknet.js";
 import { pubkeyToSoroban, negatedG2Generator, encodeG1, toHex } from "./encode.js";
 import { bls12_381 as bls } from "@noble/curves/bls12-381.js";
 import { verifyBeacon } from "./parity.js";
 
-const ROUND = Number(process.env.VECTOR_ROUND ?? 29155653);
+const env = getSystemEnv();
+const ROUND = Number(env.VECTOR_ROUND ?? 29155653);
 
 const info = await getChainInfo();
 const b = await getBeacon(ROUND);

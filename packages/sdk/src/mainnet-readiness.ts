@@ -9,6 +9,7 @@ import {
   TransactionBuilder,
 } from "@stellar/stellar-sdk";
 
+import { getSystemEnv } from "@sub-rosa/config";
 import type { SubRosaClient } from "./client.js";
 import {
   MAINNET_ARTIFACTS,
@@ -80,7 +81,7 @@ export function nativeXlmSacId(networkPassphrase: string): string {
 }
 
 export function assertMainnetConfirmed(
-  env: Record<string, string | undefined> = process.env,
+  env: Record<string, string | undefined> = getSystemEnv(),
 ): void {
   if (env.MAINNET_CONFIRM?.trim() !== MAINNET_CONFIRM_PHRASE) {
     throw new Error(

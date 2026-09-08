@@ -1,4 +1,3 @@
-// Copyright (c) 2026 Sub Rosa contributors
 import { Buffer } from "buffer";
 import {
   getAddress,
@@ -7,17 +6,19 @@ import {
 } from "@stellar/freighter-api";
 import { RoundContract } from "@sub-rosa/sdk";
 import { useMemo } from "react";
+import { getBrowserEnv } from "@sub-rosa/config/browser";
 
 import { formatEscrowAmount } from "./amount";
 
+const env = getBrowserEnv();
 export const LOGO_SRC = "/sub-rosa-logo.png";
-export const RPC_URL = import.meta.env.VITE_RPC_URL ?? "https://soroban-testnet.stellar.org";
+export const RPC_URL = env.VITE_RPC_URL ?? "https://soroban-testnet.stellar.org";
 export const NETWORK =
-  import.meta.env.VITE_NETWORK_PASSPHRASE ?? "Test SDF Network ; September 2015";
-export const CONTRACT_ID = import.meta.env.VITE_CONTRACT_ID;
-export const ESCROW_TOKEN_LABEL = import.meta.env.VITE_ESCROW_TOKEN_LABEL ?? "token";
-export const DEFAULT_ROUND_ID = import.meta.env.VITE_ROUND_ID
-  ? BigInt(import.meta.env.VITE_ROUND_ID)
+  env.VITE_NETWORK_PASSPHRASE ?? "Test SDF Network ; September 2015";
+export const CONTRACT_ID = env.VITE_CONTRACT_ID;
+export const ESCROW_TOKEN_LABEL = env.VITE_ESCROW_TOKEN_LABEL ?? "token";
+export const DEFAULT_ROUND_ID = env.VITE_ROUND_ID
+  ? BigInt(env.VITE_ROUND_ID)
   : null;
 
 /** Seconds between commit deadline and Drand round R (the “Wait for Drand R” UI phase). */

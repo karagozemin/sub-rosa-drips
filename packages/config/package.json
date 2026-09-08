@@ -1,0 +1,31 @@
+{
+  "name": "@sub-rosa/config",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Typed environment access boundary, declarative schemas, readers, and secret redaction.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Sub-Rosa-Issue/sub-rosa-issue.git",
+    "directory": "packages/config"
+  },
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./system": "./src/system.ts",
+    "./browser": "./src/browser.ts"
+  },
+  "scripts": {
+    "test": "node --import tsx --test src/readers.test.ts src/secret.test.ts src/errors.test.ts src/schema.test.ts src/browser.test.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@stellar/stellar-sdk": "^15.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3"
+  }
+}

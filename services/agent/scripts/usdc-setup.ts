@@ -13,14 +13,16 @@ import {
   TransactionBuilder,
   xdr,
 } from "@stellar/stellar-sdk";
+import { getSystemEnv } from "@sub-rosa/config";
 
-const HORIZON_URL = process.env.HORIZON_URL ?? "https://horizon-testnet.stellar.org";
-const NETWORK = process.env.NETWORK_PASSPHRASE ?? Networks.TESTNET;
-const ASSET_CODE = process.env.ASSET_CODE ?? "USDC";
-const MINT_AMOUNT = process.env.MINT_AMOUNT ?? "1000";
+const env = getSystemEnv();
+const HORIZON_URL = env.HORIZON_URL ?? "https://horizon-testnet.stellar.org";
+const NETWORK = env.NETWORK_PASSPHRASE ?? Networks.TESTNET;
+const ASSET_CODE = env.ASSET_CODE ?? "USDC";
+const MINT_AMOUNT = env.MINT_AMOUNT ?? "1000";
 
 const reqEnv = (n: string): string => {
-  const v = process.env[n];
+  const v = env[n];
   if (!v) throw new Error(`missing required env var ${n}`);
   return v;
 };
@@ -48,7 +50,7 @@ async function main() {
     await submit(kp, Operation.changeTrust({ asset }));
     diagnostics.info("trustline-ok", `trustline OK: ${kp.publicKey()}`);
   }
-  const operatorSecret = process.env.OPERATOR_SECRET;
+  const operatorSecret = env.OPERATOR_SECRET;
   if (operatorSecret) {
     const operator = Keypair.fromSecret(operatorSecret);
     await submit(operator, Operation.changeTrust({ asset }));

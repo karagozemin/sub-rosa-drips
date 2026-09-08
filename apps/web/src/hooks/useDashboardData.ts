@@ -1,5 +1,5 @@
-// Copyright (c) 2026 Sub Rosa contributors
 import { useCallback, useEffect, useState } from "react";
+import { getBrowserEnv } from "@sub-rosa/config/browser";
 import type { DashboardData } from "../dashboard/types";
 import { DASHBOARD_FIXTURE } from "../dashboard/fixture";
 import { assertDashboardData } from "../dashboard/fixture-health-check";
@@ -42,7 +42,8 @@ export function isStale(fetchedAt: string | null | undefined, nowMs: number): bo
 
 export function useDashboardData(): UseDashboardDataResult {
   const { clock, scheduler } = useTime();
-  const endpoint = import.meta.env.VITE_DASHBOARD_ENDPOINT as string | undefined;
+  const env = getBrowserEnv();
+  const endpoint = env.VITE_DASHBOARD_ENDPOINT as string | undefined;
   const useFixture = !endpoint?.trim();
 
   const [state, setState] = useState<UseDashboardDataResult>(() => ({

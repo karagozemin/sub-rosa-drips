@@ -1,5 +1,5 @@
-// Copyright (c) 2026 Sub Rosa contributors
 import { createLogger } from '@sub-rosa/logging';
+import { getSystemEnv } from '@sub-rosa/config';
 const diagnostics = createLogger("services.keeper.src.queue");
 import { KeeperStore, normalizeRoundId } from "./store.js";
 
@@ -31,8 +31,9 @@ function main() {
       usage();
     }
     const roundId = normalizeRoundId(rawRoundId);
-    const contractId = process.env.ROUND_CONTRACT_ID;
-    const network = process.env.NETWORK_PASSPHRASE;
+    const env = getSystemEnv();
+    const contractId = env.ROUND_CONTRACT_ID;
+    const network = env.NETWORK_PASSPHRASE;
     store.addRound(roundId, { contractId, network });
     diagnostics.info("added-round", `Added round ${roundId} to the queue.`);
   } else if (cmd === "list") {

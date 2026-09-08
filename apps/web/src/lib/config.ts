@@ -1,4 +1,5 @@
-// Copyright (c) 2026 Sub Rosa contributors
+import { getBrowserEnv } from "@sub-rosa/config/browser";
+
 export interface ConfigIssue {
   key: string;
   message: string;
@@ -29,7 +30,7 @@ const PLACEHOLDER_VALUES: Record<string, string[]> = {
 };
 
 export function validatePublicConfig(
-  env: Record<string, string | undefined> = import.meta.env,
+  env: Record<string, string | undefined> = getBrowserEnv(),
 ): ConfigIssue[] {
   const issues: ConfigIssue[] = [];
 
@@ -82,7 +83,7 @@ export function validatePublicConfig(
 }
 
 export function hasConfigIssues(
-  env: Record<string, string | undefined> = import.meta.env,
+  env: Record<string, string | undefined> = getBrowserEnv(),
 ): boolean {
   return validatePublicConfig(env).length > 0;
 }
