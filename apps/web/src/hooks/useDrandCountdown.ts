@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Sub Rosa contributors
 import { useEffect, useState } from "react";
 import { quicknet } from "@sub-rosa/tlock";
+import { getErrorMessage } from "@sub-rosa/errors";
 import { useTime } from "../lib/time";
 
 const QUICKNET_GENESIS = 1_692_803_367;
@@ -80,7 +81,7 @@ export function useDrandCountdown(targetRound: number, pollMs = 1000): DrandCoun
           setState({
             ...fallback,
             loading: false,
-            error: e instanceof Error ? e.message : String(e),
+            error: getErrorMessage(e),
           });
         }
       }

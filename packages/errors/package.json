@@ -1,0 +1,25 @@
+{
+  "name": "@sub-rosa/errors",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Standardized unknown-error normalization, recursive redaction, and diagnostics for Sub Rosa.",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "require": "./src/index.cjs",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "test": "node --import tsx --test src/normalize.test.ts src/redact.test.ts src/classify.test.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3"
+  }
+}

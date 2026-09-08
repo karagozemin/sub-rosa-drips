@@ -6,6 +6,7 @@ import {
   signTransaction,
 } from "@stellar/freighter-api";
 import { RoundContract } from "@sub-rosa/sdk";
+import { getErrorMessage } from "@sub-rosa/errors";
 import { useMemo } from "react";
 
 import { formatEscrowAmount } from "./amount";
@@ -51,7 +52,7 @@ export function freighterError(result: { error?: unknown }) {
 }
 
 export function displayError(error: unknown): string {
-  const message = error instanceof Error ? error.message : String(error);
+  const message = getErrorMessage(error);
   if (message.includes("Contract, #10")) {
     return "Commit window closed. Create a fresh round, then commit before Drand reaches reveal.";
   }

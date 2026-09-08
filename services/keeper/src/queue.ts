@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Sub Rosa contributors
 import { createLogger } from '@sub-rosa/logging';
+import { getErrorMessage } from "@sub-rosa/errors";
 const diagnostics = createLogger("services.keeper.src.queue");
 import { KeeperStore, normalizeRoundId } from "./store.js";
 
@@ -66,6 +67,6 @@ function main() {
 try {
   main();
 } catch (error) {
-  diagnostics.error("error", `Error: ${error instanceof Error ? error.message : String(error)}`);
+  diagnostics.error("error", `Error: ${getErrorMessage(error)}`);
   process.exit(1);
 }

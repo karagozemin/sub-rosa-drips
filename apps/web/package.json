@@ -20,6 +20,7 @@
     "@stellar/freighter-api": "^6.0.1",
     "@stellar/stellar-sdk": "^15.1.0",
     "@sub-rosa/agent": "workspace:*",
+    "@sub-rosa/errors": "workspace:*",
     "@sub-rosa/sdk": "workspace:*",
     "@sub-rosa/time": "workspace:*",
     "@sub-rosa/tlock": "workspace:*",

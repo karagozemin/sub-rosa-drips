@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Sub Rosa contributors
 import { createLogger, type Logger } from '@sub-rosa/logging';
+import { getErrorMessage } from "@sub-rosa/errors";
 const diagnostics = createLogger("services.keeper.src.status-server");
 import http from "node:http";
 
@@ -143,7 +144,7 @@ function healthzHandler(
         },
       };
     } catch (e) {
-      const detail = e instanceof Error ? e.message : String(e);
+      const detail = getErrorMessage(e);
       (src.logger ?? diagnostics).error("keeper-healthz-health-check-failed", "[keeper-healthz] health check failed:", { "detail_0": detail });
       return {
         status: 503,
@@ -201,10 +202,10 @@ export function createStatusServer(config: StatusServerConfig): http.Server {
         .then((body) => match.handler(url, body))
         .then((r) => send(res, r.status, r.body))
         .catch((e) => {
-          send(res, 500, { error: e instanceof Error ? e.message : String(e) });
+          send(res, 500, { error: getErrorMessage(e) });
         });
     } catch (e) {
-      send(res, 500, { error: e instanceof Error ? e.message : String(e) });
+      send(res, 500, { error: getErrorMessage(e) });
     }
   });
 

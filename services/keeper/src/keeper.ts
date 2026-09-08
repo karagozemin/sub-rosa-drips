@@ -16,6 +16,7 @@
 // no mock — just the SDK over real RPC and the live Drand beacon.
 
 import type { SubRosaClient } from "@sub-rosa/sdk";
+import { getErrorMessage } from "@sub-rosa/errors";
 import { openBid, fetchRoundSignature, type DrandClient } from "@sub-rosa/tlock";
 import { compareRoundIds } from "./store.js";
 import {
@@ -63,7 +64,7 @@ export function errorName(e: unknown): string {
   try {
     return JSON.stringify(e);
   } catch {
-    return String(e);
+    return getErrorMessage(e);
   }
 }
 

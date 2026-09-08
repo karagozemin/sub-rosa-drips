@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { DashboardData } from "../dashboard/types";
 import { DASHBOARD_FIXTURE } from "../dashboard/fixture";
 import { assertDashboardData } from "../dashboard/fixture-health-check";
+import { getErrorMessage } from "@sub-rosa/errors";
 import { useTime } from "../lib/time";
 
 const STALE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
@@ -84,7 +85,7 @@ export function useDashboardData(): UseDashboardDataResult {
         stale: isStale(json.meta.fetchedAt, clock.nowMs()),
       }));
     } catch (e) {
-      const message = e instanceof Error ? e.message : String(e);
+      const message = getErrorMessage(e);
       setState((s) => ({
         ...s,
         loading: false,

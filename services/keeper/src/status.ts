@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Sub Rosa contributors
 import { createLogger, type Logger } from '@sub-rosa/logging';
+import { getErrorMessage } from "@sub-rosa/errors";
 const diagnostics = createLogger("services.keeper.src.status");
 import type { SubRosaClient } from "@sub-rosa/sdk";
 import { fetchRoundSignature, type DrandClient } from "@sub-rosa/tlock";
@@ -120,7 +121,7 @@ export async function buildRoundStatus(
   try {
     round = await reader.getRound(roundId);
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
+    const msg = getErrorMessage(e);
     const notFound = /RoundNotFound/i.test(msg);
     return {
       roundId: ridStr,
@@ -290,11 +291,8 @@ export async function checkHealth(
   try {
     await reader.getRound(0n);
   } catch (e) {
-    // A valid health probe can legitimately return RoundNotFound; that still
-    // proves the RPC endpoint is reachable and returning well-formed errors.
-    const msg = e instanceof Error ? e.message : String(e);
+    const msg = getErrorMessage(e);
     if (/RoundNotFound|NotInitialized/i.test(msg)) {
-      // healthy-enough: reachable
     } else {
       rpc = "down";
       logger.error("keeper-health-rpc-probe-failed", "[keeper-health] rpc probe failed:", { "msg_0": msg });
@@ -306,7 +304,7 @@ export async function checkHealth(
     await drand.chain().info();
   } catch (e) {
     drandStatus = "down";
-    const msg = e instanceof Error ? e.message : String(e);
+    const msg = getErrorMessage(e);
     logger.error("keeper-health-drand-probe-failed", "[keeper-health] drand probe failed:", { "msg_0": msg });
     reasons.push("drand: unavailable");
   }
