@@ -1,5 +1,4 @@
 // Copyright (c) 2026 Sub Rosa contributors
-import { shortAddr } from "../lib/format";
 import { Buffer } from "buffer";
 import { useEffect, useState } from "react";
 import {

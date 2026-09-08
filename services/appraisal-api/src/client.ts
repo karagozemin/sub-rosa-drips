@@ -33,7 +33,7 @@ const SENSITIVE_FIELD = /("?(?:secret|token|password|authorization|privateKey|pr
 
 /** Bound provider diagnostics and redact common credential fields before display/logging. */
 export function sanitizePaymentErrorDiagnostic(body: string): string {
-  return body.slice(0, MAX_PAYMENT_ERROR_DIAGNOSTIC_LENGTH).replace(SENSITIVE_FIELD, '$1[REDACTED]');
+  return body.slice(0, MAX_PAYMENT_ERROR_DIAGNOSTIC_LENGTH).replace(SENSITIVE_FIELD, '$1[REDACTED]').slice(0, MAX_PAYMENT_ERROR_DIAGNOSTIC_LENGTH);
 }
 
 export class AppraisalResponseParseError extends Error {
