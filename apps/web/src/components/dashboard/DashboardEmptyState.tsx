@@ -4,6 +4,8 @@ export function DashboardEmptyState() {
     <div className="dashboard-empty-state">
       <div className="dashboard-empty-icon">
         <svg
+          aria-hidden="true"
+          focusable="false"
           width="48"
           height="48"
           viewBox="0 0 24 24"
