@@ -1,4 +1,6 @@
 // Copyright (c) 2026 Sub Rosa contributors
+import { createLogger, type Logger } from '@sub-rosa/logging';
+const diagnostics = createLogger("services.keeper.src.status");
 import type { SubRosaClient } from "@sub-rosa/sdk";
 import { fetchRoundSignature, type DrandClient } from "@sub-rosa/tlock";
 import {
@@ -76,6 +78,7 @@ export interface BuildRoundStatusArgs {
 }
 
 export interface BuildStatusSource {
+  logger?: Logger;
   reader: StatusReader;
   drand: DrandClient;
   storeRounds: () => WatchedRound[];
@@ -226,7 +229,7 @@ export async function buildKeeperStatus(source: BuildStatusSource): Promise<Keep
   } = source;
 
   const { clock } = resolveTimeContext(systemTime, source.time);
-  const health = await checkHealth(reader, drand, clock);
+  const health = await checkHealth(reader, drand, clock, source.logger);
   const nowMs = clock.nowMs();
   const startedAt = epochMs ?? nowMs;
   const watched = storeRounds();
@@ -278,6 +281,7 @@ export async function checkHealth(
   reader: StatusReader,
   drand: DrandClient,
   clock: Clock = systemClock,
+  logger: Logger = diagnostics,
 ): Promise<KeeperServiceHealth> {
   let rpc: "ok" | "degraded" | "down" = "ok";
   let drandStatus: "ok" | "degraded" | "down" = "ok";
@@ -293,7 +297,7 @@ export async function checkHealth(
       // healthy-enough: reachable
     } else {
       rpc = "down";
-      console.error("[keeper-health] rpc probe failed:", msg);
+      logger.error("keeper-health-rpc-probe-failed", "[keeper-health] rpc probe failed:", { "msg_0": msg });
       reasons.push("rpc: unavailable");
     }
   }
@@ -303,7 +307,7 @@ export async function checkHealth(
   } catch (e) {
     drandStatus = "down";
     const msg = e instanceof Error ? e.message : String(e);
-    console.error("[keeper-health] drand probe failed:", msg);
+    logger.error("keeper-health-drand-probe-failed", "[keeper-health] drand probe failed:", { "msg_0": msg });
     reasons.push("drand: unavailable");
   }
 

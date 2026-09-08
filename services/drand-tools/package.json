@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@sub-rosa/logging": "workspace:*",
     "@noble/curves": "^2.2.0",
     "@noble/hashes": "^2.2.0"
   },

@@ -1,4 +1,6 @@
 // Copyright (c) 2026 Sub Rosa contributors
+import { createLogger } from '@sub-rosa/logging';
+const diagnostics = createLogger("services.keeper.src.run");
 // Keeper CLI entry. Runs one full pass over a round (wait for R → open → reveal
 // all) and prints the result. Re-running is safe: completed work is skipped.
 //
@@ -30,8 +32,8 @@ async function main() {
       contractId: config.contractId,
     });
     const summary = await buildKeeperDryRunSummary(reader, config.roundId);
-    console.log("keeper dry-run summary:");
-    console.log(JSON.stringify(summary, bigintReplacer, 2));
+    diagnostics.info("keeper-dry-run-summary", "keeper dry-run summary:");
+    diagnostics.info("progress", JSON.stringify(summary, bigintReplacer, 2));
     return;
   }
 
@@ -46,15 +48,15 @@ async function main() {
     {
       sdk,
       drand: quicknet(),
-      log: (m) => console.log(`· ${m}`),
+      log: (m) => diagnostics.info("progress-2", `· ${m}`),
       maxWaitSeconds: config.maxWaitSeconds,
     },
     config.roundId,
   );
 
-  console.log("\nkeeper result:", JSON.stringify(result, bigintReplacer, 2));
+  diagnostics.info("keeper-result", "\nkeeper result:", { "value1_0": JSON.stringify(result, bigintReplacer, 2) });
   if (result.finalStatus === "Open") {
-    console.log("round still Open (R not yet published) — re-run later.");
+    diagnostics.info("round-still-open-r-not-yet-published-re-run-later", "round still Open (R not yet published) — re-run later.");
   }
 }
 
@@ -63,6 +65,6 @@ function bigintReplacer(_key: string, value: unknown): unknown {
 }
 
 main().catch((err) => {
-  console.error("keeper failed:", err);
+  diagnostics.error("keeper-failed", "keeper failed:", { "err_0": err });
   process.exit(1);
 });

@@ -1,3 +1,5 @@
+import { createLogger } from '@sub-rosa/logging';
+const diagnostics = createLogger("services.keeper.scripts.usdc-setup");
 // USDC asset provisioning (classic operations via Horizon).
 //
 // Establishes trustlines for the operator + both bidders to a custom-issued
@@ -53,7 +55,7 @@ async function main() {
   // Trustlines: operator (receives the winning bid) + both bidders.
   for (const kp of [operatorKp, bidder1Kp, bidder2Kp]) {
     await submit(kp, Operation.changeTrust({ asset }));
-    console.log(`trustline OK: ${kp.publicKey()}`);
+    diagnostics.info("trustline-ok", `trustline OK: ${kp.publicKey()}`);
   }
 
   // Mint USDC to the bidders so they can escrow real funds.
@@ -66,11 +68,11 @@ async function main() {
         amount: MINT_AMOUNT,
       }),
     );
-    console.log(`minted ${MINT_AMOUNT} ${ASSET_CODE} → ${kp.publicKey()}`);
+    diagnostics.info("minted", `minted ${MINT_AMOUNT} ${ASSET_CODE} → ${kp.publicKey()}`);
   }
 }
 
 main().catch((err) => {
-  console.error("usdc-setup failed:", err?.response?.data ?? err);
+  diagnostics.error("usdc-setup-failed", "usdc-setup failed:", { "value1_0": err?.response?.data ?? err });
   process.exit(1);
 });

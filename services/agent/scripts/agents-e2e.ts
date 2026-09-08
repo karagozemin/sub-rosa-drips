@@ -1,3 +1,5 @@
+import { createLogger } from '@sub-rosa/logging';
+const diagnostics = createLogger("services.agent.scripts.agents-e2e");
 // Live canonical jury demo on testnet:
 //   agents (x402 + mandate + sealed commits) → keeper reveal → clear → settle → 0
 //
@@ -74,7 +76,7 @@ async function writeJson(path: string, value: unknown) {
   const out = repoPath(path);
   await mkdir(dirname(out), { recursive: true });
   await writeFile(out, `${JSON.stringify(value, null, 2)}\n`);
-  console.log("    ✔ trace:", out);
+  diagnostics.info("trace", "    ✔ trace:", { "out_0": out });
 }
 
 async function friendbotFund(address: string) {
@@ -191,13 +193,13 @@ async function main() {
     return scValToNative(sim.result.retval) as bigint;
   };
 
-  console.log("· operator:", operatorPub);
-  console.log("· keeper:  ", Keypair.fromSecret(keeperSecret).publicKey());
-  console.log("· USDC SAC:", usdcSac);
+  diagnostics.info("operator", "· operator:", { "operatorPub_0": operatorPub });
+  diagnostics.info("keeper", "· keeper:  ", { "value1_0": Keypair.fromSecret(keeperSecret).publicKey() });
+  diagnostics.info("usdc-sac", "· USDC SAC:", { "usdcSac_0": usdcSac });
 
   const priceStroops = usdcToStroops(appraisalPrice);
 
-  console.log("\n[1/7] deploying Round + createRound…");
+  diagnostics.info("1-7-deploying-round-createround", "\n[1/7] deploying Round + createRound…");
   const deployTx = await RoundContract.deploy(
     {
       drand_pubkey: hex(DRAND_PUBKEY_C1C0),
@@ -216,7 +218,7 @@ async function main() {
     },
   );
   const contractId = (await deployTx.signAndSend()).result.options.contractId;
-  console.log("    ✔ contract", contractId);
+  diagnostics.info("contract", "    ✔ contract", { "contractId_0": contractId });
 
   const itemRefStr = "sub-rosa://agents/spectrum-block-9";
   const now = clock.nowSeconds();
@@ -240,9 +242,9 @@ async function main() {
     auditorPubkey: auditor.publicKey,
     clearingRule: "HighestBid",
   });
-  console.log("    ✔ round", roundId.toString(), "R=", revealRound);
+  diagnostics.info("round", "    ✔ round", { "value1_0": roundId.toString(), "value2_1": "R=", "revealRound_2": revealRound });
 
-  console.log("\n[2/7] starting x402 appraisal API…");
+  diagnostics.info("2-7-starting-x402-appraisal-api", "\n[2/7] starting x402 appraisal API…");
   const appraisalServerPub = Keypair.fromSecret(appraisalServerSecret).publicKey();
   const api = await buildAppraisalServer({
     facilitatorSecret,
@@ -255,7 +257,7 @@ async function main() {
   });
   await new Promise<void>((resolve) => api.listen(0, "127.0.0.1", () => resolve()));
   const appraisalUrl = `http://127.0.0.1:${(api.address() as AddressInfo).port}/appraise`;
-  console.log("    ✔", appraisalUrl);
+  diagnostics.info("progress", "    ✔", { "appraisalUrl_0": appraisalUrl });
 
   try {
     const mandateCommon = {
@@ -284,7 +286,7 @@ async function main() {
       },
     ] as const;
 
-    console.log("\n[3/7] two autonomous agents: mandate → x402 → commit…");
+    diagnostics.info("3-7-two-autonomous-agents-mandate-x402-commit", "\n[3/7] two autonomous agents: mandate → x402 → commit…");
     const results: Array<{
       plan: (typeof agentPlans)[number];
       mandate: SessionMandate;
@@ -297,7 +299,7 @@ async function main() {
         principalSecret: plan.principalSecret,
       });
       await setupSessionWallet(horizon, plan.principalSecret, sessionSecret, asset, "800");
-      const log = (m: string) => console.log(`    · [${plan.name}]`, m);
+      const log = (m: string) => diagnostics.info("progress-2", `    · [${plan.name}]`, { "m_0": m });
       const result = await runBidderAgent({
         mandate,
         sessionSecret,
@@ -325,9 +327,7 @@ async function main() {
     for (const { plan, result } of results) {
       if (!bidders.includes(result.bidder)) fail(`${plan.name} not in bidder index`);
       if (!result.appraisalSettlement?.success) fail(`${plan.name} x402 not settled`);
-      console.log(
-        `    ✔ ${plan.name}: bid ${stroopsToUsdc(result.bidValue)} USDC, escrow ${stroopsToUsdc(result.escrow)}`,
-      );
+      diagnostics.info("progress-3", `    ✔ ${plan.name}: bid ${stroopsToUsdc(result.bidValue)} USDC, escrow ${stroopsToUsdc(result.escrow)}`);
     }
 
     const alpha = results[0]!;
@@ -339,7 +339,7 @@ async function main() {
     const beforeOp = await balanceOf(operatorPub);
     const beforeContract = await balanceOf(contractId);
 
-    console.log("\n[4/7] keeper: wait R → open_reveal → reveal all…");
+    diagnostics.info("4-7-keeper-wait-r-open-reveal-reveal-all", "\n[4/7] keeper: wait R → open_reveal → reveal all…");
     const drand = quicknet();
     const keeperSdk = new SubRosaClient({
       rpcUrl: RPC_URL,
@@ -347,7 +347,7 @@ async function main() {
       contractId,
       secretKey: keeperSecret,
     });
-    const log = (m: string) => console.log("    ·", m);
+    const log = (m: string) => diagnostics.info("progress-4", "    ·", { "m_0": m });
     let rev = await keepRound(
       { sdk: keeperSdk, drand, log, maxWaitSeconds: 300, pollMs: 5000 },
       roundId,
@@ -362,9 +362,9 @@ async function main() {
     if (!results.every(({ result }) => rev.revealed.includes(result.bidder))) {
       fail(`keeper did not reveal all bids: ${JSON.stringify(rev)}`);
     }
-    console.log("    ✔ all bids revealed");
+    diagnostics.info("all-bids-revealed", "    ✔ all bids revealed");
 
-    console.log("\n[5/7] waiting for reveal deadline…");
+    diagnostics.info("5-7-waiting-for-reveal-deadline", "\n[5/7] waiting for reveal deadline…");
     while (clock.nowSeconds() <= revealDeadline + 3) {
       const remain = revealDeadline + 4 - clock.nowSeconds();
       if (remain > 0) {
@@ -373,7 +373,7 @@ async function main() {
       }
     }
 
-    console.log("\n[6/7] clear + settle…");
+    diagnostics.info("6-7-clear-settle", "\n[6/7] clear + settle…");
     const close = await closeRound({ sdk: keeperSdk, drand, log }, roundId);
     if (!close.cleared || !close.settled) fail(`close failed: ${JSON.stringify(close)}`);
     if (close.finalStatus !== "Settled") fail(`expected Settled, got ${close.finalStatus}`);
@@ -387,7 +387,7 @@ async function main() {
     const opDelta = afterOp - beforeOp;
     if (opDelta !== winnerBid) fail(`operator delta ${opDelta} != winning bid ${winnerBid}`);
 
-    console.log("\n[7/7] writing canonical web demo trace…");
+    diagnostics.info("7-7-writing-canonical-web-demo-trace", "\n[7/7] writing canonical web demo trace…");
     const generatedAt = clock.toISOString();
     const revealLines = results.map(({ plan, result }) => {
       const bid = stroopsToUsdc(result.bidValue);
@@ -468,15 +468,15 @@ async function main() {
       );
     }
 
-    console.log("\n✅ CANONICAL AGENTS E2E PASSED — commit → R → reveal → clear → settle → 0.");
-    console.log("   contract:", contractId, "round:", roundId.toString(), "winner:", close.winner);
+    diagnostics.info("canonical-agents-e2e-passed-commit-r-reveal-clear-settl", "\n✅ CANONICAL AGENTS E2E PASSED — commit → R → reveal → clear → settle → 0.");
+    diagnostics.info("contract-2", "   contract:", { "contractId_0": contractId, "value2_1": "round:", "value3_2": roundId.toString(), "value4_3": "winner:", "winner_4": close.winner });
   } finally {
     await new Promise<void>((resolve) => api.close(() => resolve()));
   }
 }
 
 main().catch((err) => {
-  console.error("\n❌ CANONICAL AGENTS E2E FAILED");
-  console.error(err);
+  diagnostics.error("canonical-agents-e2e-failed", "\n❌ CANONICAL AGENTS E2E FAILED");
+  diagnostics.error("progress-5", err);
   process.exit(1);
 });

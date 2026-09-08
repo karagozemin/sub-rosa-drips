@@ -33,5 +33,8 @@ jobs:
       - name: Install JS dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Validate structured logging
+        run: pnpm logging:test && pnpm logging:check
+
       - name: Run coverage gate
         run: pnpm coverage:test

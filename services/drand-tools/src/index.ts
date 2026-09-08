@@ -1,4 +1,6 @@
 // Copyright (c) 2026 Sub Rosa contributors
+import { createLogger } from '@sub-rosa/logging';
+const diagnostics = createLogger("services.drand-tools.src.index");
 // Risk-2 validation report. Fetches live quicknet data, confirms the message/DST
 // the contract must use, and emits the exact Soroban-encoded constants for the
 // deploy configuration (drand_pubkey, negated G2 generator, DST).
@@ -15,73 +17,71 @@ import {
 import { bls12_381 as bls } from "@noble/curves/bls12-381.js";
 
 function line() {
-  console.log("─".repeat(72));
+  diagnostics.info("progress", "─".repeat(72));
 }
 
 async function main() {
   line();
-  console.log("Sub Rosa — Risk-2 harness: tlock ↔ Drand ↔ on-chain BLS");
+  diagnostics.info("sub-rosa-risk-2-harness-tlock-drand-on-chain-bls", "Sub Rosa — Risk-2 harness: tlock ↔ Drand ↔ on-chain BLS");
   line();
 
   const info = await getChainInfo();
-  console.log(`network        : quicknet`);
-  console.log(`scheme         : ${info.schemeID}`);
-  console.log(`genesis_time   : ${info.genesis_time}`);
-  console.log(`period         : ${info.period}s`);
-  console.log(`public_key     : ${info.public_key}`);
-  console.log(`public_key len : ${info.public_key.length / 2} bytes (compressed G2)`);
+  diagnostics.info("network-quicknet", `network        : quicknet`);
+  diagnostics.info("scheme", `scheme         : ${info.schemeID}`);
+  diagnostics.info("genesis-time", `genesis_time   : ${info.genesis_time}`);
+  diagnostics.info("period", `period         : ${info.period}s`);
+  diagnostics.info("public-key", `public_key     : ${info.public_key}`);
+  diagnostics.info("public-key-len", `public_key len : ${info.public_key.length / 2} bytes (compressed G2)`);
 
   const latest = await getBeacon("latest");
-  console.log(`\nlatest round   : ${latest.round}`);
-  console.log(`signature      : ${latest.signature}`);
-  console.log(`signature len  : ${latest.signature.length / 2} bytes (compressed G1)`);
+  diagnostics.info("latest-round", `\nlatest round   : ${latest.round}`);
+  diagnostics.info("signature", `signature      : ${latest.signature}`);
+  diagnostics.info("signature-len", `signature len  : ${latest.signature.length / 2} bytes (compressed G1)`);
 
   line();
-  console.log("1) Message / DST construction (must match the contract)");
+  diagnostics.info("1-message-dst-construction-must-match-the-contract", "1) Message / DST construction (must match the contract)");
   const variant = detectMessageVariant(
     latest.round,
     latest.signature,
     info.public_key,
   );
   if (!variant) {
-    console.error("  ✗ FAIL — no known message variant verified the beacon.");
+    diagnostics.error("fail-no-known-message-variant-verified-the-beacon", "  ✗ FAIL — no known message variant verified the beacon.");
     process.exitCode = 1;
     return;
   }
-  console.log(`  ✓ verified with message = ${variant}`);
-  console.log(`  ✓ DST = "${DST}"`);
-  console.log(
-    `  contract uses sha256(be8(R)) → hash_to_g1 — ${
+  diagnostics.info("verified-with-message", `  ✓ verified with message = ${variant}`);
+  diagnostics.info("dst", `  ✓ DST = "${DST}"`);
+  diagnostics.info("contract-uses-sha256-be8-r-hash-to-g1", `  contract uses sha256(be8(R)) → hash_to_g1 — ${
       variant === "sha256(be8)" ? "MATCHES" : "MISMATCH, update contract!"
-    }`,
-  );
+    }`);
 
   line();
-  console.log("2) Soroban deploy constants (uncompressed, big-endian, Fp2=c1c0)");
-  console.log("   Fp2 ordering confirmed on-chain by the contract's BLS test;");
-  console.log("   the (c0,c1) ordering is rejected by the host as not-on-curve.");
+  diagnostics.info("2-soroban-deploy-constants-uncompressed-big-endian-fp2", "2) Soroban deploy constants (uncompressed, big-endian, Fp2=c1c0)");
+  diagnostics.info("fp2-ordering-confirmed-on-chain-by-the-contract-s-bls-t", "   Fp2 ordering confirmed on-chain by the contract's BLS test;");
+  diagnostics.info("the-c0-c1-ordering-is-rejected-by-the-host-as-not-on-cu", "   the (c0,c1) ordering is rejected by the host as not-on-curve.");
   const order: Fp2Order = "c1c0";
   const pk = pubkeyToSoroban(info.public_key, order);
   const negGen = negatedG2Generator(order);
-  console.log(`\n  drand_pubkey      = ${toHex(pk)}`);
-  console.log(`  g2_neg_generator  = ${toHex(negGen)}`);
+  diagnostics.info("drand-pubkey", `\n  drand_pubkey      = ${toHex(pk)}`);
+  diagnostics.info("g2-neg-generator", `  g2_neg_generator  = ${toHex(negGen)}`);
   // Decompressed signature for the same round, in Soroban G1 form (what the
   // keeper passes to open_reveal).
   const sigPt = bls.G1.Point.fromHex(latest.signature);
-  console.log(`\n  example sig (round ${latest.round}) uncompressed G1:`);
-  console.log(`  drand_signature   = ${toHex(encodeG1(sigPt))}`);
+  diagnostics.info("example-sig-round", `\n  example sig (round ${latest.round}) uncompressed G1:`);
+  diagnostics.info("drand-signature", `  drand_signature   = ${toHex(encodeG1(sigPt))}`);
 
   line();
-  console.log("DST hex (for .env / deploy):");
-  console.log(`  ${toHex(new TextEncoder().encode(DST))}`);
+  diagnostics.info("dst-hex-for-env-deploy", "DST hex (for .env / deploy):");
+  diagnostics.info("progress-2", `  ${toHex(new TextEncoder().encode(DST))}`);
   line();
-  console.log("Status: message/DST + Fp2(c1c0) ordering CONFIRMED on-chain by");
-  console.log("the contract's BLS test against this live signature. Bake these");
-  console.log("constants into the deploy script. No fallback path.");
+  diagnostics.info("status-message-dst-fp2-c1c0-ordering-confirmed-on-chain", "Status: message/DST + Fp2(c1c0) ordering CONFIRMED on-chain by");
+  diagnostics.info("the-contract-s-bls-test-against-this-live-signature-bak", "the contract's BLS test against this live signature. Bake these");
+  diagnostics.info("constants-into-the-deploy-script-no-fallback-path", "constants into the deploy script. No fallback path.");
   line();
 }
 
 main().catch((err) => {
-  console.error("harness error:", err);
+  diagnostics.error("harness-error", "harness error:", { "err_0": err });
   process.exitCode = 1;
 });

@@ -1,3 +1,5 @@
+import { createLogger } from '@sub-rosa/logging';
+const diagnostics = createLogger("packages.sdk.scripts.mainnet-verify");
 // Read-only mainnet proof checker — no transactions, no secrets required.
 //
 // Verifies the deployed Round contract and settled round 1 match frozen artifacts.
@@ -9,18 +11,18 @@ import { verifySettledRoundProof } from "../src/mainnet-readiness.js";
 async function main() {
   const dryRun = process.argv.includes("--dry-run") || process.env.MAINNET_DRY_RUN === "1";
 
-  console.log("Sub Rosa — mainnet settlement proof (read-only)\n");
-  console.log("Checklist:");
-  console.log("  [ ] Contract id matches frozen artifact");
-  console.log("  [ ] Round 1 status is Settled");
-  console.log("  [ ] Drand reveal round R matches artifact");
-  console.log("  [ ] Bid/escrow stroops match micro smoke amounts (1 / 5 XLM)");
-  console.log("  [ ] Bidder marked valid + settled\n");
+  diagnostics.info("sub-rosa-mainnet-settlement-proof-read-only", "Sub Rosa — mainnet settlement proof (read-only)\n");
+  diagnostics.info("checklist", "Checklist:");
+  diagnostics.info("contract-id-matches-frozen-artifact", "  [ ] Contract id matches frozen artifact");
+  diagnostics.info("round-1-status-is-settled", "  [ ] Round 1 status is Settled");
+  diagnostics.info("drand-reveal-round-r-matches-artifact", "  [ ] Drand reveal round R matches artifact");
+  diagnostics.info("bid-escrow-stroops-match-micro-smoke-amounts-1-5-xlm", "  [ ] Bid/escrow stroops match micro smoke amounts (1 / 5 XLM)");
+  diagnostics.info("bidder-marked-valid-settled", "  [ ] Bidder marked valid + settled\n");
 
   if (dryRun) {
-    console.log("DRY-RUN — would read RPC only. Re-run without --dry-run to fetch live state.\n");
-    console.log("Expected:");
-    console.log(JSON.stringify(
+    diagnostics.info("dry-run-would-read-rpc-only-re-run-without-dry-run-to-f", "DRY-RUN — would read RPC only. Re-run without --dry-run to fetch live state.\n");
+    diagnostics.info("expected", "Expected:");
+    diagnostics.info("progress", JSON.stringify(
       {
         contractId: MAINNET_ARTIFACTS.contractId,
         roundId: MAINNET_ARTIFACTS.settledRoundId,
@@ -49,16 +51,16 @@ async function main() {
     revealRound: MAINNET_ARTIFACTS.revealRound,
   });
 
-  console.log("✅ MAINNET VERIFY PASSED");
-  console.log("   contract:", process.env.ROUND_CONTRACT_ID ?? MAINNET_ARTIFACTS.contractId);
-  console.log("   round:   ", roundId.toString(), "status:", MAINNET_ARTIFACTS.status);
-  console.log("   R:       ", MAINNET_ARTIFACTS.revealRound.toString());
-  console.log("   bid:     ", MAINNET_ARTIFACTS.bidXlm, "XLM");
-  console.log("   escrow:  ", MAINNET_ARTIFACTS.escrowXlm, "XLM");
+  diagnostics.info("mainnet-verify-passed", "✅ MAINNET VERIFY PASSED");
+  diagnostics.info("contract", "   contract:", { "value1_0": process.env.ROUND_CONTRACT_ID ?? MAINNET_ARTIFACTS.contractId });
+  diagnostics.info("round", "   round:   ", { "value1_0": roundId.toString(), "value2_1": "status:", "status_2": MAINNET_ARTIFACTS.status });
+  diagnostics.info("r", "   R:       ", { "value1_0": MAINNET_ARTIFACTS.revealRound.toString() });
+  diagnostics.info("bid", "   bid:     ", { "bidXlm_0": MAINNET_ARTIFACTS.bidXlm, "value2_1": "XLM" });
+  diagnostics.info("escrow", "   escrow:  ", { "escrowXlm_0": MAINNET_ARTIFACTS.escrowXlm, "value2_1": "XLM" });
 }
 
 main().catch((err) => {
-  console.error("\n❌ MAINNET VERIFY FAILED");
-  console.error(err);
+  diagnostics.error("mainnet-verify-failed", "\n❌ MAINNET VERIFY FAILED");
+  diagnostics.error("progress-2", err);
   process.exit(1);
 });

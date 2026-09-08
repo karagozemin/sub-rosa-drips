@@ -1,3 +1,5 @@
+import { createLogger } from '@sub-rosa/logging';
+const diagnostics = createLogger("services.keeper.scripts.mainnet-settle");
 // Mainnet settlement — keepRound (wait R → open → reveal) + closeRound (clear → settle).
 // Env: KEEPER_SECRET, ROUND_CONTRACT_ID, ROUND_ID (default 1)
 // Requires MAINNET_CONFIRM=SUB_ROSA_MAINNET before submitting transactions.
@@ -67,18 +69,18 @@ async function main() {
     secretKey: keeperSecret,
   });
   const drand = quicknet();
-  const log = (m: string) => console.log("    ·", m);
+  const log = (m: string) => diagnostics.info("progress", "    ·", { "m_0": m });
 
-  console.log("· contract:", contractId);
-  console.log("· round:   ", roundId.toString());
-  console.log("· keeper:  ", keeperKp.publicKey());
+  diagnostics.info("contract", "· contract:", { "contractId_0": contractId });
+  diagnostics.info("round", "· round:   ", { "value1_0": roundId.toString() });
+  diagnostics.info("keeper", "· keeper:  ", { "value1_0": keeperKp.publicKey() });
 
   let round = await reader.getRound(roundId);
-  console.log("\n[status] ", round.status.tag, "R=", round.reveal_round.toString());
+  diagnostics.info("status", "\n[status] ", { "tag_0": round.status.tag, "value2_1": "R=", "value3_2": round.reveal_round.toString() });
 
   // ── Phase 1: open + reveal ─────────────────────────────────────────────
   if (round.status.tag === "Open" || round.status.tag === "Revealing") {
-    console.log("\n[1/3] keeper: wait R → open_reveal → reveal all…");
+    diagnostics.info("1-3-keeper-wait-r-open-reveal-reveal-all", "\n[1/3] keeper: wait R → open_reveal → reveal all…");
     let rev = await keepRound(
       { sdk, drand, log, maxWaitSeconds: 600, pollMs: 5000 },
       roundId,
@@ -90,7 +92,7 @@ async function main() {
         roundId,
       );
     }
-    console.log("    keep:", JSON.stringify(rev, bigintReplacer));
+    diagnostics.info("keep", "    keep:", { "value1_0": JSON.stringify(rev, bigintReplacer) });
     if (rev.finalStatus === "Open") {
       throw new Error("reveal not opened — Drand R not yet available");
     }
@@ -100,7 +102,7 @@ async function main() {
   // ── Phase 2: wait reveal deadline ──────────────────────────────────────
   round = await reader.getRound(roundId);
   const revealDeadline = Number(round.reveal_deadline);
-  console.log("\n[2/3] waiting for reveal deadline…", revealDeadline);
+  diagnostics.info("2-3-waiting-for-reveal-deadline", "\n[2/3] waiting for reveal deadline…", { "revealDeadline_0": revealDeadline });
   while (clock.nowSeconds() <= revealDeadline + 3) {
     const remain = revealDeadline + 4 - clock.nowSeconds();
     if (remain > 0) {
@@ -110,13 +112,13 @@ async function main() {
   }
 
   // ── Phase 3: clear + settle ────────────────────────────────────────────
-  console.log("\n[3/3] clear + settle…");
+  diagnostics.info("3-3-clear-settle", "\n[3/3] clear + settle…");
   let close = await closeRound({ sdk, drand, log }, roundId);
   if (!close.settled && close.finalStatus !== "Settled") {
     await sleep(5000);
     close = await closeRound({ sdk, drand, log }, roundId);
   }
-  console.log("    close:", JSON.stringify(close, bigintReplacer));
+  diagnostics.info("close", "    close:", { "value1_0": JSON.stringify(close, bigintReplacer) });
 
   round = await reader.getRound(roundId);
   if (round.status.tag !== "Settled") {
@@ -126,7 +128,7 @@ async function main() {
   const bidders = await reader.getBidders(roundId);
   for (const b of bidders) {
     const st = await reader.getBidState(roundId, b);
-    console.log(`    bid ${b.slice(0, 8)}… value=${st.revealed_value?.toString()} valid=${st.valid} settled=${st.settled}`);
+    diagnostics.info("bid", `    bid ${b.slice(0, 8)}… value=${st.revealed_value?.toString()} valid=${st.valid} settled=${st.settled}`);
   }
 
   const tokenSacId = nativeXlmSacId(NETWORK);
@@ -143,15 +145,15 @@ async function main() {
     );
   }
 
-  console.log("\n✅ MAINNET SETTLEMENT COMPLETE");
-  console.log("   contract:", contractId);
-  console.log("   round:", roundId.toString());
-  console.log("   winner:", close.winner ?? round.winner);
-  console.log("   final status:", round.status.tag);
+  diagnostics.info("mainnet-settlement-complete", "\n✅ MAINNET SETTLEMENT COMPLETE");
+  diagnostics.info("contract-2", "   contract:", { "contractId_0": contractId });
+  diagnostics.info("round-2", "   round:", { "value1_0": roundId.toString() });
+  diagnostics.info("winner", "   winner:", { "value1_0": close.winner ?? round.winner });
+  diagnostics.info("final-status", "   final status:", { "tag_0": round.status.tag });
 }
 
 main().catch((err) => {
-  console.error("\n❌ MAINNET SETTLEMENT FAILED");
-  console.error(err);
+  diagnostics.error("mainnet-settlement-failed", "\n❌ MAINNET SETTLEMENT FAILED");
+  diagnostics.error("progress-2", err);
   process.exit(1);
 });

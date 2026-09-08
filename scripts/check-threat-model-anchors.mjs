@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 // Copyright (c) 2026 Sub Rosa contributors
+import { createLogger } from '../packages/logging/src/index.cjs';
+const diagnostics = createLogger("scripts.check-threat-model-anchors");
 /**
  * Check that docs/THREAT_MODEL.md still covers the core sealed-round risk
  * topics used by SCF / Wave diligence.
@@ -102,13 +104,13 @@ function main() {
   const { content, path } = loadDoc(docPath);
 
   if (content === null) {
-    console.error(`[FAIL] ${docPath} not found at ${path}`);
-    console.error("Threat model anchor coverage check cannot run without the doc.");
+    diagnostics.error("fail", `[FAIL] ${docPath} not found at ${path}`);
+    diagnostics.error("threat-model-anchor-coverage-check-cannot-run-without-t", "Threat model anchor coverage check cannot run without the doc.");
     process.exit(1);
   }
 
-  console.log(`\nThreat model anchor coverage for ${docPath}`);
-  console.log("=".repeat(72));
+  diagnostics.info("threat-model-anchor-coverage-for", `\nThreat model anchor coverage for ${docPath}`);
+  diagnostics.info("progress", "=".repeat(72));
 
   let allPassed = true;
   const failures = [];
@@ -122,31 +124,27 @@ function main() {
     }
 
     const tag = ok ? "PASS" : "FAIL";
-    console.log(`  [${tag}] ${anchor.label}`);
+    diagnostics.info("progress-2", `  [${tag}] ${anchor.label}`);
     if (result.matched) {
-      console.log(`         matched: ${result.matched}`);
+      diagnostics.info("matched", `         matched: ${result.matched}`);
     } else {
-      console.log("         candidates (none matched):");
+      diagnostics.info("candidates-none-matched", "         candidates (none matched):");
       for (const p of anchor.patterns) {
-        console.log(`           - ${p}`);
+        diagnostics.info("progress-3", `           - ${p}`);
       }
     }
   }
 
-  console.log("=".repeat(72));
+  diagnostics.info("progress-4", "=".repeat(72));
 
   if (allPassed) {
-    console.log(`All ${REQUIRED_ANCHORS.length} required threat model anchors are present.`);
+    diagnostics.info("all", `All ${REQUIRED_ANCHORS.length} required threat model anchors are present.`);
     process.exit(0);
   } else {
-    console.error(
-      `Missing ${failures.length} required threat model anchor(s): ` +
-        failures.map((a) => a.id).join(", "),
-    );
-    console.error(
-      "Either add coverage under docs/THREAT_MODEL.md or extend REQUIRED_ANCHORS in",
-    );
-    console.error("scripts/check-threat-model-anchors.mjs so the inventory stays in sync.");
+    diagnostics.error("progress-5", `Missing ${failures.length} required threat model anchor(s): ` +
+        failures.map((a) => a.id).join(", "));
+    diagnostics.error("either-add-coverage-under-docs-threat-model-md-or-exten", "Either add coverage under docs/THREAT_MODEL.md or extend REQUIRED_ANCHORS in");
+    diagnostics.error("scripts-check-threat-model-anchors-mjs-so-the-inventory", "scripts/check-threat-model-anchors.mjs so the inventory stays in sync.");
     process.exit(1);
   }
 }

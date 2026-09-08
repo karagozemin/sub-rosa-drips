@@ -1,3 +1,5 @@
+import { createLogger } from '@sub-rosa/logging';
+const diagnostics = createLogger("services.auction-template.sealed-auction");
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
@@ -35,84 +37,84 @@ const reqEnv = (n: string): string => {
   return v;
 };
 const usdc = (s: bigint) => `${(Number(s) / 1e7).toFixed(2)} USDC`;
-const banner = (s: string) => console.log(`\n═══ ${s} ═══`);
+const banner = (s: string) => diagnostics.info("progress", `\n═══ ${s} ═══`);
 
 async function fixtureMain() {
   const fixturePath = resolve(process.cwd(), "../receipt-cli/src/fixtures/golden.json");
   const receipt: RoundReceipt = JSON.parse(await readFile(fixturePath, "utf8"));
 
-  console.log("mode:         fixture (offline)");
-  console.log("receipt:      golden.json");
-  console.log(`round:        ${receipt.roundId}`);
-  console.log(`rule:         ${receipt.clearingRule}`);
-  console.log(`status:       ${receipt.status}`);
-  console.log(`bidders:      ${receipt.bidders.length}`);
-  console.log(`winner:       ${receipt.winner ?? "(voided)"}`);
+  diagnostics.info("mode-fixture-offline", "mode:         fixture (offline)");
+  diagnostics.info("receipt-golden-json", "receipt:      golden.json");
+  diagnostics.info("round", `round:        ${receipt.roundId}`);
+  diagnostics.info("rule", `rule:         ${receipt.clearingRule}`);
+  diagnostics.info("status", `status:       ${receipt.status}`);
+  diagnostics.info("bidders", `bidders:      ${receipt.bidders.length}`);
+  diagnostics.info("winner", `winner:       ${receipt.winner ?? "(voided)"}`);
 
   banner("Phase 1 — Setup");
-  console.log("operator creates a Round with:");
-  console.log(`  itemRef:       ${receipt.itemRef}`);
-  console.log(`  revealRound:   ${receipt.revealRound}`);
-  console.log(`  commitDeadline: ${receipt.commitDeadline}s`);
-  console.log(`  revealDeadline: ${receipt.revealDeadline}s`);
-  console.log(`  clearingRule:  ${receipt.clearingRule}`);
-  console.log("(protocol-level: Round contract, Drand config, USDC SAC address)");
+  diagnostics.info("operator-creates-a-round-with", "operator creates a Round with:");
+  diagnostics.info("itemref", `  itemRef:       ${receipt.itemRef}`);
+  diagnostics.info("revealround", `  revealRound:   ${receipt.revealRound}`);
+  diagnostics.info("commitdeadline", `  commitDeadline: ${receipt.commitDeadline}s`);
+  diagnostics.info("revealdeadline", `  revealDeadline: ${receipt.revealDeadline}s`);
+  diagnostics.info("clearingrule", `  clearingRule:  ${receipt.clearingRule}`);
+  diagnostics.info("protocol-level-round-contract-drand-config-usdc-sac-add", "(protocol-level: Round contract, Drand config, USDC SAC address)");
 
   banner("Phase 2 — Commit (sealed bid creation + escrow)");
   for (const bidder of receipt.bidders) {
     const b = receipt.bids[bidder];
-    console.log(`bidder ${bidder.slice(0, 16)}…`);
-    console.log(`  escrow:    ${usdc(BigInt(b.escrow))}`);
-    console.log(`  commitment: ${b.commitment}`);
-    console.log(`  ciphertext: ${b.evidence.ciphertext ? `${b.evidence.ciphertext.slice(0, 16)}…` : "null"}`);
+    diagnostics.info("bidder", `bidder ${bidder.slice(0, 16)}…`);
+    diagnostics.info("escrow", `  escrow:    ${usdc(BigInt(b.escrow))}`);
+    diagnostics.info("commitment", `  commitment: ${b.commitment}`);
+    diagnostics.info("ciphertext", `  ciphertext: ${b.evidence.ciphertext ? `${b.evidence.ciphertext.slice(0, 16)}…` : "null"}`);
     if (b.revealedValue) {
-      console.log(`  revealed:  ${usdc(BigInt(b.revealedValue))}`);
+      diagnostics.info("revealed", `  revealed:  ${usdc(BigInt(b.revealedValue))}`);
     }
   }
-  console.log("(template-level: bid value, nonce generation, tlock seal to Drand R)");
-  console.log("(protocol-level: escrow locked via SAC transfer, H stored on-chain)");
+  diagnostics.info("template-level-bid-value-nonce-generation-tlock-seal-to", "(template-level: bid value, nonce generation, tlock seal to Drand R)");
+  diagnostics.info("protocol-level-escrow-locked-via-sac-transfer-h-stored", "(protocol-level: escrow locked via SAC transfer, H stored on-chain)");
 
   banner("Phase 3 — Reveal (Drand R gates opening)");
-  console.log("permissionless keeper:");
-  console.log("  1. waits for Drand quicknet round R");
-  console.log("  2. fetches threshold BLS signature for R");
-  console.log("  3. calls open_reveal — contract verifies BLS on-chain via pairing_check");
-  console.log("  4. reads deterministic bidder index");
-  console.log("  5. decrypts each seal with tlock + Drand R");
-  console.log("  6. submits reveal (value + nonce) — contract checks sha256(be16(value)‖nonce) == H");
-  console.log("(protocol-level: BLS verification in Round contract)");
-  console.log("(template-level: openBid from @sub-rosa/tlock)");
+  diagnostics.info("permissionless-keeper", "permissionless keeper:");
+  diagnostics.info("1-waits-for-drand-quicknet-round-r", "  1. waits for Drand quicknet round R");
+  diagnostics.info("2-fetches-threshold-bls-signature-for-r", "  2. fetches threshold BLS signature for R");
+  diagnostics.info("3-calls-open-reveal-contract-verifies-bls-on-chain-via", "  3. calls open_reveal — contract verifies BLS on-chain via pairing_check");
+  diagnostics.info("4-reads-deterministic-bidder-index", "  4. reads deterministic bidder index");
+  diagnostics.info("5-decrypts-each-seal-with-tlock-drand-r", "  5. decrypts each seal with tlock + Drand R");
+  diagnostics.info("6-submits-reveal-value-nonce-contract-checks-sha256-be1", "  6. submits reveal (value + nonce) — contract checks sha256(be16(value)‖nonce) == H");
+  diagnostics.info("protocol-level-bls-verification-in-round-contract", "(protocol-level: BLS verification in Round contract)");
+  diagnostics.info("template-level-openbid-from-sub-rosa-tlock", "(template-level: openBid from @sub-rosa/tlock)");
 
   banner("Phase 4 — Clear + Settle (deterministic winner)");
-  console.log(`clearing rule: ${receipt.clearingRule}`);
-  console.log(`winner:        ${receipt.winner ?? "(none — voided)"}`);
-  console.log(`winning value: ${receipt.winningValue ? usdc(BigInt(receipt.winningValue)) : "N/A"}`);
+  diagnostics.info("clearing-rule", `clearing rule: ${receipt.clearingRule}`);
+  diagnostics.info("winner-2", `winner:        ${receipt.winner ?? "(none — voided)"}`);
+  diagnostics.info("winning-value", `winning value: ${receipt.winningValue ? usdc(BigInt(receipt.winningValue)) : "N/A"}`);
   for (const bidder of receipt.bidders) {
     const b = receipt.bids[bidder];
-    console.log(`  ${bidder.slice(0, 16)}… valid=${b.valid} settled=${b.settled}`);
+    diagnostics.info("progress-2", `  ${bidder.slice(0, 16)}… valid=${b.valid} settled=${b.settled}`);
   }
-  console.log("(protocol-level: deterministic iteration, escrow check, SAC transfers)");
+  diagnostics.info("protocol-level-deterministic-iteration-escrow-check-sac", "(protocol-level: deterministic iteration, escrow check, SAC transfers)");
 
   banner("Phase 5 — Receipt Verification (offline)");
   const result = verifyReceipt(receipt);
   for (const issue of result.issues) {
-    console.log(`  ${issue.severity === "error" ? "✗" : "!"} [${issue.code}] ${issue.message}`);
+    diagnostics.info("progress-3", `  ${issue.severity === "error" ? "✗" : "!"} [${issue.code}] ${issue.message}`);
   }
-  console.log(`\nverdict: ${result.valid ? "PASS" : "FAIL"}`);
-  console.log(`computed winner: ${result.computedWinner.address ?? "(none)"} = ${result.computedWinner.value ?? "N/A"}`);
+  diagnostics.info("verdict", `\nverdict: ${result.valid ? "PASS" : "FAIL"}`);
+  diagnostics.info("computed-winner", `computed winner: ${result.computedWinner.address ?? "(none)"} = ${result.computedWinner.value ?? "N/A"}`);
 
   banner("Failure Cases");
-  console.log("under-escrowed bid:");
-  console.log("  escrow=150, revealed=200 → EscrowTooSmall at clear — bid marked invalid");
-  console.log("missed reveal:");
-  console.log("  bidder commits but never reveals → no valid bid entry → not in winner selection");
-  console.log("late commit:");
-  console.log("  commit after commitDeadline → CommitWindowClosed error from contract");
-  console.log("void after grace:");
-  console.log("  Drand R never arrives, reveal_deadline + 3600s grace elapses");
-  console.log("  → anyone calls void() → all escrow refunded, round status = Voided");
+  diagnostics.info("under-escrowed-bid", "under-escrowed bid:");
+  diagnostics.info("escrow-150-revealed-200-escrowtoosmall-at-clear-bid-mar", "  escrow=150, revealed=200 → EscrowTooSmall at clear — bid marked invalid");
+  diagnostics.info("missed-reveal", "missed reveal:");
+  diagnostics.info("bidder-commits-but-never-reveals-no-valid-bid-entry-not", "  bidder commits but never reveals → no valid bid entry → not in winner selection");
+  diagnostics.info("late-commit", "late commit:");
+  diagnostics.info("commit-after-commitdeadline-commitwindowclosed-error-fr", "  commit after commitDeadline → CommitWindowClosed error from contract");
+  diagnostics.info("void-after-grace", "void after grace:");
+  diagnostics.info("drand-r-never-arrives-reveal-deadline-3600s-grace-elaps", "  Drand R never arrives, reveal_deadline + 3600s grace elapses");
+  diagnostics.info("anyone-calls-void-all-escrow-refunded-round-status-void", "  → anyone calls void() → all escrow refunded, round status = Voided");
 
-  console.log("\n✅ FIXTURE PASSED — golden receipt verified, all phases documented.");
+  diagnostics.info("fixture-passed-golden-receipt-verified-all-phases-docum", "\n✅ FIXTURE PASSED — golden receipt verified, all phases documented.");
 }
 
 async function testnetMain() {
@@ -152,11 +154,11 @@ async function testnetMain() {
     return scValToNative(sim.result.retval) as bigint;
   };
 
-  console.log("mode:     testnet");
-  console.log("network:", NETWORK);
-  console.log("rpc:     ", RPC_URL);
-  console.log("operator:", op);
-  console.log("token:   ", usdcSac);
+  diagnostics.info("mode-testnet", "mode:     testnet");
+  diagnostics.info("network", "network:", { "NETWORK_0": NETWORK });
+  diagnostics.info("rpc", "rpc:     ", { "RPC_URL_0": RPC_URL });
+  diagnostics.info("operator", "operator:", { "op_0": op });
+  diagnostics.info("token", "token:   ", { "usdcSac_0": usdcSac });
 
   banner("Phase 1 — Deploy + Create Round");
   const deployTx = await RoundContract.deploy(
@@ -177,7 +179,7 @@ async function testnetMain() {
     },
   );
   const contractId = (await deployTx.signAndSend()).result.options.contractId;
-  console.log("contract:", contractId);
+  diagnostics.info("contract", "contract:", { "contractId_0": contractId });
 
   const now = clock.nowSeconds();
   const revealRound = Math.ceil((now + 135 - DRAND_GENESIS) / DRAND_PERIOD);
@@ -195,7 +197,7 @@ async function testnetMain() {
     auditorPubkey: auditor.publicKey,
     clearingRule: "HighestBid",
   });
-  console.log(`round:    ${roundId} (R=${revealRound}, ~${tReveal - now}s to reveal)`);
+  diagnostics.info("round-2", `round:    ${roundId} (R=${revealRound}, ~${tReveal - now}s to reveal)`);
 
   banner("Phase 2 — Seal + Commit");
   const V1 = 300_000_000n;
@@ -218,7 +220,7 @@ async function testnetMain() {
     });
     const client = new SubRosaClient({ rpcUrl: RPC_URL, networkPassphrase: NETWORK, contractId, secretKey: secret });
     await client.commit({ roundId, sealed, escrow });
-    console.log(`  ${who}: bid ${usdc(value)} / escrow ${usdc(escrow)}`);
+    diagnostics.info("progress-4", `  ${who}: bid ${usdc(value)} / escrow ${usdc(escrow)}`);
   }
 
   await commitBid(bidder1Secret, V1, E1, "bidder1");
@@ -226,11 +228,11 @@ async function testnetMain() {
 
   const locked = await balanceOf(contractId) - beforeContract;
   if (locked !== E1 + E2) throw new Error(`escrow mismatch: ${locked} != ${E1 + E2}`);
-  console.log(`  contract locked ${usdc(E1 + E2)}`);
+  diagnostics.info("contract-locked", `  contract locked ${usdc(E1 + E2)}`);
 
   banner("Phase 3 — Keeper: Wait R → Open → Reveal All");
   const keeperSdk = new SubRosaClient({ rpcUrl: RPC_URL, networkPassphrase: NETWORK, contractId, secretKey: keeperSecret });
-  const log = (m: string) => console.log("  ·", m);
+  const log = (m: string) => diagnostics.info("progress-5", "  ·", { "m_0": m });
   let rev = await keepRound({ sdk: keeperSdk, drand, log, maxWaitSeconds: 240, pollMs: 5000 }, roundId);
   for (let i = 0; i < 3 && rev.finalStatus === "Open"; i++) {
     await sleep(5000);
@@ -239,7 +241,7 @@ async function testnetMain() {
   if (![b1, b2].every((a) => rev.revealed.includes(a))) {
     throw new Error(`not all revealed: ${JSON.stringify(rev)}`);
   }
-  console.log("  all bids revealed");
+  diagnostics.info("all-bids-revealed", "  all bids revealed");
 
   banner("Phase 4 — Clear + Settle");
   while (clock.nowSeconds() <= revealDeadline + 3) {
@@ -249,16 +251,16 @@ async function testnetMain() {
 
   const close = await closeRound({ sdk: keeperSdk, drand, log }, roundId);
   if (!close.cleared || !close.settled) throw new Error(`close failed: ${JSON.stringify(close)}`);
-  console.log(`  winner: ${close.winner} (highest bid ${usdc(V2)})`);
+  diagnostics.info("winner-3", `  winner: ${close.winner} (highest bid ${usdc(V2)})`);
 
   const afterOp = await balanceOf(op);
   const afterB1 = await balanceOf(b1);
   const afterB2 = await balanceOf(b2);
   const afterContract = await balanceOf(contractId);
-  console.log(`  operator: ${usdc(afterOp - beforeOp)} (+winning bid)`);
-  console.log(`  bidder1:  ${usdc(afterB1 - beforeB1)} (refunded)`);
-  console.log(`  bidder2:  ${usdc(afterB2 - beforeB2)} (net -bid)`);
-  console.log(`  contract: ${usdc(afterContract)} (= 0)`);
+  diagnostics.info("operator-2", `  operator: ${usdc(afterOp - beforeOp)} (+winning bid)`);
+  diagnostics.info("bidder1", `  bidder1:  ${usdc(afterB1 - beforeB1)} (refunded)`);
+  diagnostics.info("bidder2", `  bidder2:  ${usdc(afterB2 - beforeB2)} (net -bid)`);
+  diagnostics.info("contract-2", `  contract: ${usdc(afterContract)} (= 0)`);
 
   if (afterContract !== 0n) throw new Error(`contract balance ${afterContract} != 0`);
   if (afterOp - beforeOp !== V2) throw new Error(`operator delta ${afterOp - beforeOp} != ${V2}`);
@@ -268,12 +270,12 @@ async function testnetMain() {
   const receipt = await operator.exportReceipt(roundId);
   const result = verifyReceipt(receipt);
   for (const issue of result.issues) {
-    console.log(`  ${issue.severity === "error" ? "✗" : "!"} [${issue.code}] ${issue.message}`);
+    diagnostics.info("progress-6", `  ${issue.severity === "error" ? "✗" : "!"} [${issue.code}] ${issue.message}`);
   }
-  console.log(`verdict: ${result.valid ? "PASS" : "FAIL"}`);
-  console.log(`winner:  ${result.computedWinner.address} = ${usdc(result.computedWinner.value ?? 0n)}`);
+  diagnostics.info("verdict-2", `verdict: ${result.valid ? "PASS" : "FAIL"}`);
+  diagnostics.info("winner-4", `winner:  ${result.computedWinner.address} = ${usdc(result.computedWinner.value ?? 0n)}`);
 
-  console.log("\n✅ TESTNET PASSED — full lifecycle: deploy → commit → R → reveal → clear → settle → verify.");
+  diagnostics.info("testnet-passed-full-lifecycle-deploy-commit-r-reveal-cl", "\n✅ TESTNET PASSED — full lifecycle: deploy → commit → R → reveal → clear → settle → verify.");
 }
 
 async function main() {
@@ -286,7 +288,7 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error("\n❌ SEALED AUCTION TEMPLATE FAILED");
-  console.error(err);
+  diagnostics.error("sealed-auction-template-failed", "\n❌ SEALED AUCTION TEMPLATE FAILED");
+  diagnostics.error("progress-7", err);
   process.exit(1);
 });

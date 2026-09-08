@@ -1,3 +1,5 @@
+import { createLogger } from '@sub-rosa/logging';
+const diagnostics = createLogger("packages.sdk.scripts.live-smoke");
 // Live smoke gate — proves the SDK's sign → submit → poll → read path actually
 // works against a real Soroban network, end to end, with no mock and no
 // fallback. It deploys a fresh Round to testnet (constructor configured with
@@ -58,12 +60,12 @@ async function main() {
   const bidderKp = Keypair.fromSecret(bidderSecret);
   const operatorSigner = basicNodeSigner(operatorKp, NETWORK);
 
-  console.log("· operator:", operatorKp.publicKey());
-  console.log("· bidder:  ", bidderKp.publicKey());
-  console.log("· token:   ", usdc, "(native XLM SAC)");
+  diagnostics.info("operator", "· operator:", { "value1_0": operatorKp.publicKey() });
+  diagnostics.info("bidder", "· bidder:  ", { "value1_0": bidderKp.publicKey() });
+  diagnostics.info("token", "· token:   ", { "usdc_0": usdc, "value2_1": "(native XLM SAC)" });
 
   // ── 1. Deploy a fresh Round (constructor over live RPC) ────────────────
-  console.log("\n[1/5] deploying Round + running __constructor…");
+  diagnostics.info("1-5-deploying-round-running-constructor", "\n[1/5] deploying Round + running __constructor…");
   const deployTx = await RoundContract.deploy(
     {
       drand_pubkey: hex(DRAND_PUBKEY_C1C0),
@@ -83,7 +85,7 @@ async function main() {
   );
   const deployed = await deployTx.signAndSend();
   const contractId = deployed.result.options.contractId;
-  console.log("    ✔ deployed:", contractId);
+  diagnostics.info("deployed", "    ✔ deployed:", { "contractId_0": contractId });
 
   // ── 2. createRound via the SDK (operator signs) ────────────────────────
   const operator = new SubRosaClient({
@@ -104,7 +106,7 @@ async function main() {
 
   const auditor = generateAuditorKeypair();
 
-  console.log("\n[2/5] createRound…", { revealRound, commitDeadline, revealDeadline });
+  diagnostics.info("2-5-createround", "\n[2/5] createRound…", { "value1_0": { revealRound, commitDeadline, revealDeadline } });
   const roundId = await operator.createRound({
     itemRef: sha256("sub-rosa://smoke/item-1"),
     revealRound,
@@ -113,10 +115,10 @@ async function main() {
     auditorPubkey: auditor.publicKey,
     clearingRule: "HighestBid",
   });
-  console.log("    ✔ round id:", roundId.toString());
+  diagnostics.info("round-id", "    ✔ round id:", { "value1_0": roundId.toString() });
 
   // ── 3. Seal a real bid to round R and commit (bidder signs) ────────────
-  console.log("\n[3/5] sealing bid to quicknet round R + commit…");
+  diagnostics.info("3-5-sealing-bid-to-quicknet-round-r-commit", "\n[3/5] sealing bid to quicknet round R + commit…");
   const drand = await quicknet();
   const value = 10_000_000n; // 1 XLM (stroops) bid
   const escrow = 50_000_000n; // 5 XLM budget locked
@@ -138,10 +140,10 @@ async function main() {
     secretKey: bidderSecret,
   });
   await bidder.commit({ roundId, sealed, escrow });
-  console.log("    ✔ committed, escrow locked:", escrow.toString(), "stroops");
+  diagnostics.info("committed-escrow-locked", "    ✔ committed, escrow locked:", { "value1_0": escrow.toString(), "value2_1": "stroops" });
 
   // ── 4. Read everything back (read-only simulation) ─────────────────────
-  console.log("\n[4/5] reading state back over RPC…");
+  diagnostics.info("4-5-reading-state-back-over-rpc", "\n[4/5] reading state back over RPC…");
   const reader = new SubRosaClient({
     rpcUrl: RPC_URL,
     networkPassphrase: NETWORK,
@@ -154,7 +156,7 @@ async function main() {
   const seal = await reader.getSeal(roundId, bidderKp.publicKey());
 
   // ── 5. Assert the round-trip is exactly what we wrote ──────────────────
-  console.log("\n[5/5] verifying…");
+  diagnostics.info("5-5-verifying", "\n[5/5] verifying…");
   const fail = (m: string): never => {
     throw new Error(`smoke assertion failed: ${m}`);
   };
@@ -174,14 +176,14 @@ async function main() {
     fail("auditor blob length mismatch");
   }
 
-  console.log("    ✔ status Open, 1 bidder, escrow locked, commitment matches H");
-  console.log("    ✔ on-chain ciphertext + auditor blob match the off-chain seal");
-  console.log("\n✅ LIVE SMOKE PASSED — sign/submit/poll/read all work on testnet.");
-  console.log("   contract:", contractId, "round:", roundId.toString());
+  diagnostics.info("status-open-1-bidder-escrow-locked-commitment-matches-h", "    ✔ status Open, 1 bidder, escrow locked, commitment matches H");
+  diagnostics.info("on-chain-ciphertext-auditor-blob-match-the-off-chain-se", "    ✔ on-chain ciphertext + auditor blob match the off-chain seal");
+  diagnostics.info("live-smoke-passed-sign-submit-poll-read-all-work-on-tes", "\n✅ LIVE SMOKE PASSED — sign/submit/poll/read all work on testnet.");
+  diagnostics.info("contract", "   contract:", { "contractId_0": contractId, "value2_1": "round:", "value3_2": roundId.toString() });
 }
 
 main().catch((err) => {
-  console.error("\n❌ LIVE SMOKE FAILED");
-  console.error(err);
+  diagnostics.error("live-smoke-failed", "\n❌ LIVE SMOKE FAILED");
+  diagnostics.error("progress", err);
   process.exit(1);
 });

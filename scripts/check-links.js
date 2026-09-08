@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 // Copyright (c) 2026 Sub Rosa contributors
+const { createLogger } = require('../packages/logging/src/index.cjs');
+const diagnostics = createLogger("scripts.check-links");
 'use strict';
 
 const fs = require('fs');
@@ -74,7 +76,7 @@ for (const relFile of FILES) {
   const absFile = path.join(ROOT, relFile);
 
   if (!fs.existsSync(absFile)) {
-    console.error(`ERROR  ${relFile}:0 — source file not found`);
+    diagnostics.error("error", `ERROR  ${relFile}:0 — source file not found`);
     broken++;
     continue;
   }
@@ -112,7 +114,7 @@ for (const relFile of FILES) {
         checked++;
         const ownSlugs = getSlugs(absFile);
         if (!ownSlugs.has(anchor)) {
-          console.error(`BROKEN ${relFile}:${lineNum} — anchor #${anchor} not found in same file`);
+          diagnostics.error("broken", `BROKEN ${relFile}:${lineNum} — anchor #${anchor} not found in same file`);
           broken++;
         }
         continue;
@@ -125,7 +127,7 @@ for (const relFile of FILES) {
 
       if (!fs.existsSync(absTarget)) {
         const rel = path.relative(ROOT, absTarget);
-        console.error(`BROKEN ${relFile}:${lineNum} — file not found: ${filePart} (→ ${rel})`);
+        diagnostics.error("broken-2", `BROKEN ${relFile}:${lineNum} — file not found: ${filePart} (→ ${rel})`);
         broken++;
         continue;
       }
@@ -134,7 +136,7 @@ for (const relFile of FILES) {
       if (anchor && /\.md$/i.test(absTarget)) {
         const targetSlugs = getSlugs(absTarget);
         if (!targetSlugs.has(anchor.toLowerCase())) {
-          console.error(`BROKEN ${relFile}:${lineNum} — anchor #${anchor} not found in ${path.relative(ROOT, absTarget)}`);
+          diagnostics.error("broken-3", `BROKEN ${relFile}:${lineNum} — anchor #${anchor} not found in ${path.relative(ROOT, absTarget)}`);
           broken++;
         }
       }
@@ -144,19 +146,19 @@ for (const relFile of FILES) {
 
 if (external.length > 0) {
   if (showExternal) {
-    console.log(`\nExternal links (${external.length}, not validated):`);
+    diagnostics.info("external-links", `\nExternal links (${external.length}, not validated):`);
     for (const { file, line, href } of external) {
-      console.log(`  ${file}:${line}: ${href}`);
+      diagnostics.info("progress", `  ${file}:${line}: ${href}`);
     }
   } else {
-    console.log(`External links: ${external.length} (pass --external to list)`);
+    diagnostics.info("external-links-2", `External links: ${external.length} (pass --external to list)`);
   }
 }
 
 if (broken === 0) {
-  console.log(`OK  ${checked} local link(s) checked, ${skipped} allowlisted`);
+  diagnostics.info("ok", `OK  ${checked} local link(s) checked, ${skipped} allowlisted`);
   process.exit(0);
 } else {
-  console.error(`\nFAIL  ${broken} broken link(s) — fix the paths above or add to ALLOWLIST in scripts/check-links.js`);
+  diagnostics.error("fail", `\nFAIL  ${broken} broken link(s) — fix the paths above or add to ALLOWLIST in scripts/check-links.js`);
   process.exit(1);
 }

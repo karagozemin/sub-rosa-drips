@@ -83,6 +83,8 @@ importers:
         specifier: ^6.3.5
         version: 6.4.3(@types/node@25.9.1)(tsx@4.22.4)
 
+  packages/logging: {}
+
   packages/round-bindings:
     dependencies:
       '@stellar/stellar-sdk':
@@ -110,6 +112,9 @@ importers:
       '@stellar/stellar-sdk':
         specifier: ^15.1.0
         version: 15.1.0
+      '@sub-rosa/logging':
+        specifier: workspace:*
+        version: link:../logging
       '@sub-rosa/round-bindings':
         specifier: workspace:*
         version: link:../round-bindings
@@ -184,6 +189,9 @@ importers:
       '@sub-rosa/keeper':
         specifier: workspace:*
         version: link:../keeper
+      '@sub-rosa/logging':
+        specifier: workspace:*
+        version: link:../../packages/logging
       '@sub-rosa/sdk':
         specifier: workspace:*
         version: link:../../packages/sdk
@@ -212,6 +220,9 @@ importers:
       '@stellar/stellar-sdk':
         specifier: ^15.1.0
         version: 15.1.0
+      '@sub-rosa/logging':
+        specifier: workspace:*
+        version: link:../../packages/logging
       '@x402/core':
         specifier: ^2.14.0
         version: 2.14.0
@@ -234,6 +245,9 @@ importers:
       '@sub-rosa/keeper':
         specifier: workspace:*
         version: link:../keeper
+      '@sub-rosa/logging':
+        specifier: workspace:*
+        version: link:../../packages/logging
       '@sub-rosa/sdk':
         specifier: workspace:*
         version: link:../../packages/sdk
@@ -265,6 +279,9 @@ importers:
       '@noble/hashes':
         specifier: ^2.2.0
         version: 2.2.0
+      '@sub-rosa/logging':
+        specifier: workspace:*
+        version: link:../../packages/logging
     devDependencies:
       '@types/node':
         specifier: ^25.9.1
@@ -278,6 +295,9 @@ importers:
 
   services/keeper:
     dependencies:
+      '@sub-rosa/logging':
+        specifier: workspace:*
+        version: link:../../packages/logging
       '@sub-rosa/sdk':
         specifier: workspace:*
         version: link:../../packages/sdk
@@ -303,6 +323,9 @@ importers:
 
   services/receipt-cli:
     dependencies:
+      '@sub-rosa/logging':
+        specifier: workspace:*
+        version: link:../../packages/logging
       '@sub-rosa/sdk':
         specifier: workspace:*
         version: link:../../packages/sdk

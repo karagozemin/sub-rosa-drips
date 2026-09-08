@@ -1,3 +1,5 @@
+import { createLogger } from '@sub-rosa/logging';
+const diagnostics = createLogger("services.appraisal-api.scripts.usdc-setup");
 // USDC asset provisioning for the x402 e2e (classic ops via Horizon).
 // Trustlines for the payer (client) + resource server, and mint USDC to the
 // payer. The facilitator needs XLM only, so it gets no trustline.
@@ -44,16 +46,16 @@ async function main() {
 
   for (const kp of [clientKp, serverKp]) {
     await submit(kp, Operation.changeTrust({ asset }));
-    console.log(`trustline OK: ${kp.publicKey()}`);
+    diagnostics.info("trustline-ok", `trustline OK: ${kp.publicKey()}`);
   }
   await submit(
     issuerKp,
     Operation.payment({ destination: clientKp.publicKey(), asset, amount: MINT_AMOUNT }),
   );
-  console.log(`minted ${MINT_AMOUNT} ${ASSET_CODE} → ${clientKp.publicKey()}`);
+  diagnostics.info("minted", `minted ${MINT_AMOUNT} ${ASSET_CODE} → ${clientKp.publicKey()}`);
 }
 
 main().catch((err) => {
-  console.error("usdc-setup failed:", err?.response?.data ?? err);
+  diagnostics.error("usdc-setup-failed", "usdc-setup failed:", { "value1_0": err?.response?.data ?? err });
   process.exit(1);
 });

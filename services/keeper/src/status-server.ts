@@ -1,4 +1,6 @@
 // Copyright (c) 2026 Sub Rosa contributors
+import { createLogger, type Logger } from '@sub-rosa/logging';
+const diagnostics = createLogger("services.keeper.src.status-server");
 import http from "node:http";
 
 import type { DrandClient } from "@sub-rosa/tlock";
@@ -8,6 +10,7 @@ import type { StatusReader } from "./status.js";
 import { buildKeeperStatus, type BuildStatusSource } from "./status.js";
 
 export interface StatusServerConfig {
+  logger?: Logger;
   host?: string;
   port?: number;
   contractId: string;
@@ -141,7 +144,7 @@ function healthzHandler(
       };
     } catch (e) {
       const detail = e instanceof Error ? e.message : String(e);
-      console.error("[keeper-healthz] health check failed:", detail);
+      (src.logger ?? diagnostics).error("keeper-healthz-health-check-failed", "[keeper-healthz] health check failed:", { "detail_0": detail });
       return {
         status: 503,
         body: {
@@ -159,6 +162,7 @@ export function createStatusServer(config: StatusServerConfig): http.Server {
   const port = config.port ?? Number(process.env.KEEPER_STATUS_PORT ?? "8090");
 
   const source: BuildStatusSource = {
+    logger: config.logger,
     reader: config.reader,
     drand: config.drand,
     storeRounds: config.storeRounds,
