@@ -1,3 +1,5 @@
+import { createLogger } from '@sub-rosa/logging';
+const diagnostics = createLogger("services.agent.scripts.usdc-setup");
 // USDC setup for multi-agent e2e: trustlines + mint for both principals and the
 // appraisal resource server.
 
@@ -44,24 +46,24 @@ async function main() {
 
   for (const kp of [p1, p2, appraisalServer]) {
     await submit(kp, Operation.changeTrust({ asset }));
-    console.log(`trustline OK: ${kp.publicKey()}`);
+    diagnostics.info("trustline-ok", `trustline OK: ${kp.publicKey()}`);
   }
   const operatorSecret = process.env.OPERATOR_SECRET;
   if (operatorSecret) {
     const operator = Keypair.fromSecret(operatorSecret);
     await submit(operator, Operation.changeTrust({ asset }));
-    console.log(`trustline OK: ${operator.publicKey()}`);
+    diagnostics.info("trustline-ok-2", `trustline OK: ${operator.publicKey()}`);
   }
   for (const kp of [p1, p2]) {
     await submit(
       issuerKp,
       Operation.payment({ destination: kp.publicKey(), asset, amount: MINT_AMOUNT }),
     );
-    console.log(`minted ${MINT_AMOUNT} ${ASSET_CODE} → ${kp.publicKey()}`);
+    diagnostics.info("minted", `minted ${MINT_AMOUNT} ${ASSET_CODE} → ${kp.publicKey()}`);
   }
 }
 
 main().catch((err) => {
-  console.error("usdc-setup failed:", err?.response?.data ?? err);
+  diagnostics.error("usdc-setup-failed", "usdc-setup failed:", { "value1_0": err?.response?.data ?? err });
   process.exit(1);
 });

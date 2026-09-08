@@ -1,3 +1,5 @@
+import { createLogger } from '@sub-rosa/logging';
+const diagnostics = createLogger("packages.sdk.scripts.mainnet-ready");
 // Consolidated mainnet launch readiness — read-only by default.
 //
 // Usage:
@@ -63,30 +65,30 @@ async function main() {
       });
 
   const report = await runMainnetReadiness(input, { reader });
-  console.log(formatReadinessReport(report));
+  diagnostics.info("progress", formatReadinessReport(report));
 
   if (strict && hasBlockingFailures(report.checks)) {
     throw new Error("readiness checks failed in strict mode");
   }
 
   if (report.blockCount > 0) {
-    console.log("\nBlocking issues must be resolved before mainnet execution.");
-    console.log("Value-moving commands require:");
-    console.log(`  MAINNET_CONFIRM=${MAINNET_CONFIRM_PHRASE}`);
+    diagnostics.info("blocking-issues-must-be-resolved-before-mainnet-executi", "\nBlocking issues must be resolved before mainnet execution.");
+    diagnostics.info("value-moving-commands-require", "Value-moving commands require:");
+    diagnostics.info("mainnet-confirm", `  MAINNET_CONFIRM=${MAINNET_CONFIRM_PHRASE}`);
     process.exit(1);
   }
 
-  console.log("\n✅ MAINNET READINESS OK");
-  console.log("Recommended launch checklist:");
-  console.log("  1. pnpm mainnet:ready -- --strict");
-  console.log("  2. pnpm mainnet:verify");
-  console.log("  3. pnpm mainnet:micro            # dry-run");
-  console.log("  4. MAINNET_CONFIRM=SUB_ROSA_MAINNET … pnpm mainnet:micro -- --execute");
-  console.log("  5. MAINNET_CONFIRM=SUB_ROSA_MAINNET … pnpm mainnet:settle");
+  diagnostics.info("mainnet-readiness-ok", "\n✅ MAINNET READINESS OK");
+  diagnostics.info("recommended-launch-checklist", "Recommended launch checklist:");
+  diagnostics.info("1-pnpm-mainnet-ready-strict", "  1. pnpm mainnet:ready -- --strict");
+  diagnostics.info("2-pnpm-mainnet-verify", "  2. pnpm mainnet:verify");
+  diagnostics.info("3-pnpm-mainnet-micro-dry-run", "  3. pnpm mainnet:micro            # dry-run");
+  diagnostics.info("4-mainnet-confirm-sub-rosa-mainnet-pnpm-mainnet-micro-e", "  4. MAINNET_CONFIRM=SUB_ROSA_MAINNET … pnpm mainnet:micro -- --execute");
+  diagnostics.info("5-mainnet-confirm-sub-rosa-mainnet-pnpm-mainnet-settle", "  5. MAINNET_CONFIRM=SUB_ROSA_MAINNET … pnpm mainnet:settle");
 }
 
 main().catch((err) => {
-  console.error("\n❌ MAINNET READINESS FAILED");
-  console.error(err);
+  diagnostics.error("mainnet-readiness-failed", "\n❌ MAINNET READINESS FAILED");
+  diagnostics.error("progress-2", err);
   process.exit(1);
 });

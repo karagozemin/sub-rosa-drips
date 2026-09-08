@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 // Copyright (c) 2026 Sub Rosa contributors
+import { createLogger } from '../packages/logging/src/index.cjs';
+const diagnostics = createLogger("scripts.check-snapshots");
 // check-snapshots.mjs
 //
 // CI guard for Issue #120 — contract snapshot inventory check.
@@ -109,8 +111,8 @@ let files;
 try {
   files = readdirSync(SNAPSHOT_DIR).filter((f) => f.endsWith(".json"));
 } catch (err) {
-  console.error(`\n✗ Cannot read snapshot directory: ${SNAPSHOT_DIR}`);
-  console.error(`  ${err.message}`);
+  diagnostics.error("cannot-read-snapshot-directory", `\n✗ Cannot read snapshot directory: ${SNAPSHOT_DIR}`);
+  diagnostics.error("progress", `  ${err.message}`);
   process.exit(1);
 }
 
@@ -126,21 +128,19 @@ const missing = REQUIRED_CATEGORIES.filter(
 const total = files.length;
 const required = REQUIRED_CATEGORIES.length;
 
-console.log(`\nContract snapshot inventory`);
-console.log(`  Directory : ${SNAPSHOT_DIR}`);
-console.log(`  Files found  : ${total}`);
-console.log(`  Categories checked : ${required}`);
+diagnostics.info("contract-snapshot-inventory", `\nContract snapshot inventory`);
+diagnostics.info("directory", `  Directory : ${SNAPSHOT_DIR}`);
+diagnostics.info("files-found", `  Files found  : ${total}`);
+diagnostics.info("categories-checked", `  Categories checked : ${required}`);
 
 if (missing.length === 0) {
-  console.log(`\n✓ All ${required} required snapshot categories are present.\n`);
+  diagnostics.info("all", `\n✓ All ${required} required snapshot categories are present.\n`);
   process.exit(0);
 } else {
-  console.error(`\n✗ ${missing.length} required snapshot category/categories missing:\n`);
+  diagnostics.error("progress-2", `\n✗ ${missing.length} required snapshot category/categories missing:\n`);
   for (const cat of missing) {
-    console.error(`    - ${cat}`);
+    diagnostics.error("progress-3", `    - ${cat}`);
   }
-  console.error(
-    `\n  Regenerate snapshots with: cargo test -p sub-rosa-round\n`,
-  );
+  diagnostics.error("regenerate-snapshots-with-cargo-test-p-sub-rosa-round", `\n  Regenerate snapshots with: cargo test -p sub-rosa-round\n`);
   process.exit(1);
 }

@@ -1,4 +1,6 @@
 // Copyright (c) 2026 Sub Rosa contributors
+import { createLogger, type Logger } from '@sub-rosa/logging';
+const diagnostics = createLogger("services.agent.src.write-demo-trace");
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 
@@ -76,6 +78,7 @@ const repoPath = (path: string) =>
 export async function writeDemoTrace(
   path: string,
   trace: DemoTracePayload,
+  logger: Logger = diagnostics,
 ): Promise<void> {
   const out = repoPath(path);
   await mkdir(dirname(out), { recursive: true });
@@ -87,5 +90,5 @@ export async function writeDemoTrace(
     "",
   ].join("\n");
   await writeFile(out, body);
-  console.log("    ✔ web demo trace:", out);
+  logger.info("web-demo-trace", "    ✔ web demo trace:", { "out_0": out });
 }

@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@sub-rosa/logging": "workspace:*",
     "@sub-rosa/keeper": "workspace:*",
     "@sub-rosa/sdk": "workspace:*",
     "@sub-rosa/time": "workspace:*",

@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import { createLogger } from '../packages/logging/src/index.cjs';
+const diagnostics = createLogger("scripts.check-direct-time-access");
 /**
  * Fail when first-party code calls wall-clock or timer globals directly.
  * Allowed only in packages/time/src/system.ts and packages/time/src/fake*.ts.
@@ -90,24 +92,22 @@ export function scanTree(rootDir = ROOT) {
 
 function main() {
   const violations = scanTree();
-  console.log("\nDirect time-access guard");
-  console.log("=".repeat(72));
-  console.log(`  scanned: ${SCAN_ROOTS.join(", ")}`);
-  console.log(`  allowed: ${[...ALLOWED].join(", ")}`);
-  console.log("=".repeat(72));
+  diagnostics.info("direct-time-access-guard", "\nDirect time-access guard");
+  diagnostics.info("progress", "=".repeat(72));
+  diagnostics.info("scanned", `  scanned: ${SCAN_ROOTS.join(", ")}`);
+  diagnostics.info("allowed", `  allowed: ${[...ALLOWED].join(", ")}`);
+  diagnostics.info("progress-2", "=".repeat(72));
 
   if (violations.length === 0) {
-    console.log("PASS  no direct Date/timer usage outside @sub-rosa/time.");
+    diagnostics.info("pass-no-direct-date-timer-usage-outside-sub-rosa-time", "PASS  no direct Date/timer usage outside @sub-rosa/time.");
     process.exit(0);
   }
 
-  console.error(`FAIL  ${violations.length} violation(s):`);
+  diagnostics.error("fail", `FAIL  ${violations.length} violation(s):`);
   for (const v of violations) {
-    console.error(`  ${v.relPath}:${v.line}  ${v.pattern}  ${v.text}`);
+    diagnostics.error("progress-3", `  ${v.relPath}:${v.line}  ${v.pattern}  ${v.text}`);
   }
-  console.error(
-    "\nUse @sub-rosa/time (systemTime, FakeClock, FakeScheduler) instead.",
-  );
+  diagnostics.error("use-sub-rosa-time-systemtime-fakeclock-fakescheduler-in", "\nUse @sub-rosa/time (systemTime, FakeClock, FakeScheduler) instead.");
   process.exit(1);
 }
 

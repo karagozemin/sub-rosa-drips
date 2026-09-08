@@ -1,3 +1,5 @@
+import { createLogger } from '@sub-rosa/logging';
+const diagnostics = createLogger("services.keeper.scripts.lifecycle-e2e");
 // Full live testnet lifecycle proof.
 //
 //   commit×2 → wait R → openReveal → reveal all → clear → settle/refund → 0
@@ -70,7 +72,7 @@ async function writeAuditorTrace(path: string, trace: unknown) {
   const out = repoPath(path);
   await mkdir(dirname(out), { recursive: true });
   await writeFile(out, `${JSON.stringify(trace, null, 2)}\n`);
-  console.log("    ✔ auditor trace:", out);
+  diagnostics.info("auditor-trace", "    ✔ auditor trace:", { "out_0": out });
 }
 
 async function main() {
@@ -87,10 +89,10 @@ async function main() {
   const op = operatorKp.publicKey();
   const b1 = bidder1Kp.publicKey();
   const b2 = bidder2Kp.publicKey();
-  console.log("· operator:", op);
-  console.log("· bidder1: ", b1);
-  console.log("· bidder2: ", b2);
-  console.log("· token:   ", usdcSac, "(USDC SAC)");
+  diagnostics.info("operator", "· operator:", { "op_0": op });
+  diagnostics.info("bidder1", "· bidder1: ", { "b1_0": b1 });
+  diagnostics.info("bidder2", "· bidder2: ", { "b2_0": b2 });
+  diagnostics.info("token", "· token:   ", { "usdcSac_0": usdcSac, "value2_1": "(USDC SAC)" });
 
   // USDC balance reader — a read-only simulation of the SAC's `balance(id)`.
   const server = new rpc.Server(RPC_URL);
@@ -108,7 +110,7 @@ async function main() {
   };
 
   // ── 1. Deploy a fresh Round denominated in USDC ────────────────────────
-  console.log("\n[1/8] deploying Round (USDC-denominated)…");
+  diagnostics.info("1-8-deploying-round-usdc-denominated", "\n[1/8] deploying Round (USDC-denominated)…");
   const signer = basicNodeSigner(operatorKp, NETWORK);
   const deployTx = await RoundContract.deploy(
     {
@@ -128,7 +130,7 @@ async function main() {
     },
   );
   const contractId = (await deployTx.signAndSend()).result.options.contractId;
-  console.log("    ✔", contractId);
+  diagnostics.info("progress", "    ✔", { "contractId_0": contractId });
 
   // ── 2. createRound (HighestBid) with a short, near-future R ────────────
   const operator = new SubRosaClient({ rpcUrl: RPC_URL, networkPassphrase: NETWORK, contractId, secretKey: operatorSecret });
@@ -139,7 +141,7 @@ async function main() {
   const revealDeadline = tReveal + 75;
   const auditor = generateAuditorKeypair();
 
-  console.log(`\n[2/8] createRound (R=${revealRound}, time(R)≈${tReveal - now}s, reveal window 75s)…`);
+  diagnostics.info("2-8-createround-r", `\n[2/8] createRound (R=${revealRound}, time(R)≈${tReveal - now}s, reveal window 75s)…`);
   const roundId = await operator.createRound({
     itemRef: sha256("sub-rosa://lifecycle/sealed-asset-auction"),
     revealRound,
@@ -148,7 +150,7 @@ async function main() {
     auditorPubkey: auditor.publicKey,
     clearingRule: "HighestBid",
   });
-  console.log("    ✔ round", roundId.toString());
+  diagnostics.info("round", "    ✔ round", { "value1_0": roundId.toString() });
 
   // ── 3. Two bidders seal + commit ───────────────────────────────────────
   const V1 = 300_000_000n; // 30 USDC bid
@@ -163,9 +165,9 @@ async function main() {
     b2: await balanceOf(b2),
     contract: await balanceOf(contractId),
   };
-  console.log("\n[3/8] initial USDC:", {
+  diagnostics.info("3-8-initial-usdc", "\n[3/8] initial USDC:", { "value1_0": {
     operator: usdc(before.op), bidder1: usdc(before.b1), bidder2: usdc(before.b2), contract: usdc(before.contract),
-  });
+  } });
 
   async function commitBid(secret: string, value: bigint, escrow: bigint, who: string) {
     const nonce = generateNonce();
@@ -176,10 +178,10 @@ async function main() {
     });
     const client = new SubRosaClient({ rpcUrl: RPC_URL, networkPassphrase: NETWORK, contractId, secretKey: secret });
     await client.commit({ roundId, sealed, escrow });
-    console.log(`    ✔ ${who} committed bid ${usdc(value)} / escrow ${usdc(escrow)} USDC`);
+    diagnostics.info("progress-2", `    ✔ ${who} committed bid ${usdc(value)} / escrow ${usdc(escrow)} USDC`);
     return { label: who, blobHex: bytesHex(sealed.auditorBlob) };
   }
-  console.log("\n[3/8] sealing + committing two bids…");
+  diagnostics.info("3-8-sealing-committing-two-bids", "\n[3/8] sealing + committing two bids…");
   const auditorRows = [
     await commitBid(bidder1Secret, V1, E1, "bidder1"),
     await commitBid(bidder2Secret, V2, E2, "bidder2"),
@@ -200,12 +202,12 @@ async function main() {
   if (lockedContract - before.contract !== E1 + E2) {
     fail(`escrow locked ${lockedContract - before.contract} != ${E1 + E2}`);
   }
-  console.log(`    ✔ contract locked ${usdc(E1 + E2)} USDC in escrow`);
+  diagnostics.info("contract-locked", `    ✔ contract locked ${usdc(E1 + E2)} USDC in escrow`);
 
   // ── 4. Keeper: wait R, open reveal, reveal all ─────────────────────────
-  console.log("\n[4/8] keeper waits for R, opens reveal, reveals all…");
+  diagnostics.info("4-8-keeper-waits-for-r-opens-reveal-reveals-all", "\n[4/8] keeper waits for R, opens reveal, reveals all…");
   const keeperSdk = new SubRosaClient({ rpcUrl: RPC_URL, networkPassphrase: NETWORK, contractId, secretKey: keeperSecret });
-  const log = (m: string) => console.log("    ·", m);
+  const log = (m: string) => diagnostics.info("progress-3", "    ·", { "m_0": m });
   let rev = await keepRound({ sdk: keeperSdk, drand, log, maxWaitSeconds: 240, pollMs: 5000 }, roundId);
   for (let i = 0; i < 3 && rev.finalStatus === "Open"; i++) {
     await sleep(5000);
@@ -214,55 +216,55 @@ async function main() {
   if (![b1, b2].every((b) => rev.revealed.includes(b))) {
     fail(`not all bids revealed: ${JSON.stringify(rev)}`);
   }
-  console.log("    ✔ both bids revealed");
+  diagnostics.info("both-bids-revealed", "    ✔ both bids revealed");
 
   // ── 5. Wait out the reveal deadline ────────────────────────────────────
-  console.log("\n[5/8] waiting for the reveal deadline to pass…");
+  diagnostics.info("5-8-waiting-for-the-reveal-deadline-to-pass", "\n[5/8] waiting for the reveal deadline to pass…");
   while (clock.nowSeconds() <= revealDeadline + 3) {
     const remain = revealDeadline + 4 - clock.nowSeconds();
     if (remain > 0) { log(`~${remain}s until reveal deadline`); await sleep(Math.min(5000, remain * 1000)); }
   }
 
   // ── 6. Keeper: clear + settle ──────────────────────────────────────────
-  console.log("\n[6/8] keeper clears + settles…");
+  diagnostics.info("6-8-keeper-clears-settles", "\n[6/8] keeper clears + settles…");
   const close = await closeRound({ sdk: keeperSdk, drand, log }, roundId);
-  console.log("    close:", JSON.stringify(close, (_k, v) => (typeof v === "bigint" ? v.toString() : v)));
+  diagnostics.info("close", "    close:", { "value1_0": JSON.stringify(close, (_k, v) => (typeof v === "bigint" ? v.toString() : v)) });
   if (!close.cleared) fail("round was not cleared");
   if (!close.settled) fail("round was not settled");
   if (close.winner !== b2) fail(`winner ${close.winner} != bidder2 ${b2}`);
-  console.log("    ✔ deterministic winner = bidder2 (highest bid 70 USDC)");
+  diagnostics.info("deterministic-winner-bidder2-highest-bid-70-usdc", "    ✔ deterministic winner = bidder2 (highest bid 70 USDC)");
 
   // ── 7. Balance checks — real SAC transfers, contract drains to zero ────
-  console.log("\n[7/8] verifying balances…");
+  diagnostics.info("7-8-verifying-balances", "\n[7/8] verifying balances…");
   const after = {
     op: await balanceOf(op),
     b1: await balanceOf(b1),
     b2: await balanceOf(b2),
     contract: await balanceOf(contractId),
   };
-  console.log("    final USDC:", {
+  diagnostics.info("final-usdc", "    final USDC:", { "value1_0": {
     operator: usdc(after.op), bidder1: usdc(after.b1), bidder2: usdc(after.b2), contract: usdc(after.contract),
-  });
+  } });
   if (after.op - before.op !== V2) fail(`operator delta ${after.op - before.op} != winning bid ${V2}`);
   if (after.b1 !== before.b1) fail(`bidder1 not made whole: ${before.b1} → ${after.b1}`);
   if (before.b2 - after.b2 !== V2) fail(`bidder2 net ${before.b2 - after.b2} != bid ${V2} (surplus not refunded)`);
   if (after.contract !== 0n) fail(`contract balance ${after.contract} != 0`);
-  console.log("    ✔ operator +70, bidder1 whole, bidder2 net -70 (surplus refunded), contract = 0");
+  diagnostics.info("operator-70-bidder1-whole-bidder2-net-70-surplus-refund", "    ✔ operator +70, bidder1 whole, bidder2 net -70 (surplus refunded), contract = 0");
 
   // ── 8. Idempotency — second close must skip, not error ─────────────────
-  console.log("\n[8/8] second close pass (idempotency)…");
+  diagnostics.info("8-8-second-close-pass-idempotency", "\n[8/8] second close pass (idempotency)…");
   const close2 = await closeRound({ sdk: keeperSdk, drand, log }, roundId);
-  console.log("    close#2:", JSON.stringify(close2, (_k, v) => (typeof v === "bigint" ? v.toString() : v)));
+  diagnostics.info("close-2", "    close#2:", { "value1_0": JSON.stringify(close2, (_k, v) => (typeof v === "bigint" ? v.toString() : v)) });
   if (close2.cleared || close2.settled) fail("second pass re-cleared/re-settled");
   if (close2.finalStatus !== "Settled") fail(`unexpected final status ${close2.finalStatus}`);
-  console.log("    ✔ idempotent: already-settled round skipped cleanly");
+  diagnostics.info("idempotent-already-settled-round-skipped-cleanly", "    ✔ idempotent: already-settled round skipped cleanly");
 
-  console.log("\n✅ FULL LIFECYCLE PASSED — commit×2 → R → open → reveal → clear → settle → 0.");
-  console.log("   contract:", contractId, "round:", roundId.toString(), "winner:", close.winner);
+  diagnostics.info("full-lifecycle-passed-commit-2-r-open-reveal-clear-sett", "\n✅ FULL LIFECYCLE PASSED — commit×2 → R → open → reveal → clear → settle → 0.");
+  diagnostics.info("contract", "   contract:", { "contractId_0": contractId, "value2_1": "round:", "value3_2": roundId.toString(), "value4_3": "winner:", "winner_4": close.winner });
 }
 
 main().catch((err) => {
-  console.error("\n❌ FULL LIFECYCLE FAILED");
-  console.error(err);
+  diagnostics.error("full-lifecycle-failed", "\n❌ FULL LIFECYCLE FAILED");
+  diagnostics.error("progress-4", err);
   process.exit(1);
 });

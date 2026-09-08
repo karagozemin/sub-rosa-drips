@@ -1,4 +1,6 @@
 // Copyright (c) 2026 Sub Rosa contributors
+import { createLogger, type Logger } from '@sub-rosa/logging';
+const diagnostics = createLogger("services.keeper.src.store");
 import * as fs from "fs";
 import * as path from "path";
 import { systemClock } from "@sub-rosa/time";
@@ -60,7 +62,7 @@ export class KeeperStore {
   private readonly storePath: string;
   private data: StoreData;
 
-  constructor(storePath?: string) {
+  constructor(storePath?: string, private readonly logger: Logger = diagnostics) {
     this.storePath =
       storePath || process.env.KEEPER_STORE_PATH || ".keeper-store.json";
     this.data = this.loadStore();
@@ -81,7 +83,7 @@ export class KeeperStore {
       const rounds: Record<string, WatchedRound> = {};
       for (const [key, value] of Object.entries(parsed.rounds)) {
         if (!value || typeof value !== "object" || Array.isArray(value)) {
-          console.warn(`[Store] Dropping malformed stored round entry ${key}: expected an object`);
+          this.logger.warn("store-dropping-malformed-stored-round-entry", `[Store] Dropping malformed stored round entry ${key}: expected an object`);
           continue;
         }
         const stored = value as Partial<WatchedRound>;
@@ -89,20 +91,18 @@ export class KeeperStore {
         try {
           id = normalizeRoundId(stored.roundId ?? key);
         } catch {
-          console.warn(
-            `[Store] Dropping malformed stored round entry ${key}: non-numeric or invalid round id ${JSON.stringify(stored.roundId ?? key)}`,
-          );
+          this.logger.warn("store-dropping-malformed-stored-round-entry-2", `[Store] Dropping malformed stored round entry ${key}: non-numeric or invalid round id ${JSON.stringify(stored.roundId ?? key)}`);
           continue;
         }
         rounds[id] = { ...stored, roundId: id } as WatchedRound;
       }
       return { rounds };
     } catch (e) {
-      console.warn(`[Store] Failed to parse ${this.storePath}. Backing up corrupted file and starting fresh.`);
+      this.logger.warn("store-failed-to-parse", `[Store] Failed to parse ${this.storePath}. Backing up corrupted file and starting fresh.`);
       try {
         fs.renameSync(this.storePath, `${this.storePath}.corrupted.${systemClock.nowMs()}`);
       } catch (backupErr) {
-        console.error(`[Store] Could not backup corrupted file:`, backupErr);
+        this.logger.error("store-could-not-backup-corrupted-file", `[Store] Could not backup corrupted file:`, { "backupErr_0": backupErr });
       }
       return { rounds: {} };
     }
@@ -117,7 +117,7 @@ export class KeeperStore {
       }
       fs.writeFileSync(this.storePath, JSON.stringify(this.data, null, 2), "utf-8");
     } catch (e) {
-      console.error(`[Store] Failed to save store to ${this.storePath}:`, e);
+      this.logger.error("store-failed-to-save-store-to", `[Store] Failed to save store to ${this.storePath}:`, { "e_0": e });
     }
   }
 

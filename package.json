@@ -21,6 +21,8 @@
     }
   },
   "scripts": {
+    "logging:test": "pnpm --filter @sub-rosa/logging test && node --test scripts/check-logging.test.mjs",
+    "logging:check": "node scripts/check-logging.mjs",
     "contract:build": "stellar contract build",
     "contract:test": "cargo test -p sub-rosa-round",
     "errors:check": "node scripts/check-round-errors.mjs",

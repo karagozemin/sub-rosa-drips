@@ -1,3 +1,5 @@
+import { createLogger } from '@sub-rosa/logging';
+const diagnostics = createLogger("services.keeper.scripts.keeper-e2e");
 // Live keeper end-to-end proof.
 //
 // Deploys a fresh Round with reveal round R a couple of minutes out, commits a
@@ -59,12 +61,12 @@ async function main() {
   const operatorKp = Keypair.fromSecret(operatorSecret);
   const bidderKp = Keypair.fromSecret(bidderSecret);
   const keeperKp = Keypair.fromSecret(keeperSecret);
-  console.log("· operator:", operatorKp.publicKey());
-  console.log("· bidder:  ", bidderKp.publicKey());
-  console.log("· keeper:  ", keeperKp.publicKey(), "(permissionless 3rd party)");
+  diagnostics.info("operator", "· operator:", { "value1_0": operatorKp.publicKey() });
+  diagnostics.info("bidder", "· bidder:  ", { "value1_0": bidderKp.publicKey() });
+  diagnostics.info("keeper", "· keeper:  ", { "value1_0": keeperKp.publicKey(), "value2_1": "(permissionless 3rd party)" });
 
   // 1. Deploy a fresh Round.
-  console.log("\n[1/6] deploying Round…");
+  diagnostics.info("1-6-deploying-round", "\n[1/6] deploying Round…");
   const signer = basicNodeSigner(operatorKp, NETWORK);
   const deployTx = await RoundContract.deploy(
     {
@@ -84,7 +86,7 @@ async function main() {
     },
   );
   const contractId = (await deployTx.signAndSend()).result.options.contractId;
-  console.log("    ✔", contractId);
+  diagnostics.info("progress", "    ✔", { "contractId_0": contractId });
 
   // 2. createRound with R ~150s out.
   const operator = new SubRosaClient({ rpcUrl: RPC_URL, networkPassphrase: NETWORK, contractId, secretKey: operatorSecret });
@@ -95,7 +97,7 @@ async function main() {
   const revealDeadline = tReveal + 600;
   const auditor = generateAuditorKeypair();
 
-  console.log(`\n[2/6] createRound (R=${revealRound}, time(R)≈${tReveal - now}s out)…`);
+  diagnostics.info("2-6-createround-r", `\n[2/6] createRound (R=${revealRound}, time(R)≈${tReveal - now}s out)…`);
   const roundId = await operator.createRound({
     itemRef: sha256("sub-rosa://keeper-e2e/item"),
     revealRound,
@@ -104,10 +106,10 @@ async function main() {
     auditorPubkey: auditor.publicKey,
     clearingRule: "HighestBid",
   });
-  console.log("    ✔ round", roundId.toString());
+  diagnostics.info("round", "    ✔ round", { "value1_0": roundId.toString() });
 
   // 3. Seal a bid to R and commit.
-  console.log("\n[3/6] sealing + committing a bid…");
+  diagnostics.info("3-6-sealing-committing-a-bid", "\n[3/6] sealing + committing a bid…");
   const drand = quicknet();
   const value = 10_000_000n;
   const escrow = 50_000_000n;
@@ -122,12 +124,12 @@ async function main() {
   });
   const bidder = new SubRosaClient({ rpcUrl: RPC_URL, networkPassphrase: NETWORK, contractId, secretKey: bidderSecret });
   await bidder.commit({ roundId, sealed, escrow });
-  console.log("    ✔ committed (escrow", escrow.toString(), "stroops)");
+  diagnostics.info("committed-escrow", "    ✔ committed (escrow", { "value1_0": escrow.toString(), "value2_1": "stroops)" });
 
   // 4. Run the keeper (3rd-party account). It waits for R, opens, reveals.
-  console.log("\n[4/6] running keeper (waits for R, opens with real signature, reveals)…");
+  diagnostics.info("4-6-running-keeper-waits-for-r-opens-with-real-signatur", "\n[4/6] running keeper (waits for R, opens with real signature, reveals)…");
   const keeperSdk = new SubRosaClient({ rpcUrl: RPC_URL, networkPassphrase: NETWORK, contractId, secretKey: keeperSecret });
-  const log = (m: string) => console.log("    ·", m);
+  const log = (m: string) => diagnostics.info("progress-2", "    ·", { "m_0": m });
 
   let res = await keepRound({ sdk: keeperSdk, drand, log, maxWaitSeconds: 240, pollMs: 5000 }, roundId);
   // Tolerate API replica lag at the R boundary with a couple of re-passes.
@@ -135,32 +137,32 @@ async function main() {
     await scheduler.sleep(5000);
     res = await keepRound({ sdk: keeperSdk, drand, log, maxWaitSeconds: 60, pollMs: 5000 }, roundId);
   }
-  console.log("    keeper pass #1:", JSON.stringify(res, bigintReplacer));
+  diagnostics.info("keeper-pass-1", "    keeper pass #1:", { "value1_0": JSON.stringify(res, bigintReplacer) });
 
   if (!res.openedReveal && res.finalStatus !== "Revealing") fail(`reveal not opened (status ${res.finalStatus})`);
   if (!res.revealed.includes(bidderKp.publicKey())) fail("bidder was not revealed");
 
   // 5. Verify on-chain that the bid is revealed and valid.
-  console.log("\n[5/6] verifying on-chain reveal…");
+  diagnostics.info("5-6-verifying-on-chain-reveal", "\n[5/6] verifying on-chain reveal…");
   const reader = new SubRosaClient({ rpcUrl: RPC_URL, networkPassphrase: NETWORK, contractId, publicKey: keeperKp.publicKey() });
   const st = await reader.getBidState(roundId, bidderKp.publicKey());
   if (st.revealed_value !== value) fail(`revealed_value ${st.revealed_value} != ${value}`);
   if (st.valid !== true) fail("revealed bid not marked valid");
-  console.log("    ✔ revealed_value =", st.revealed_value?.toString(), "valid =", st.valid);
+  diagnostics.info("revealed-value", "    ✔ revealed_value =", { "value1_0": st.revealed_value?.toString(), "value2_1": "valid =", "valid_2": st.valid });
 
   // 6. Idempotency: a second keeper pass must skip, not fail or double-act.
-  console.log("\n[6/6] second keeper pass (idempotency)…");
+  diagnostics.info("6-6-second-keeper-pass-idempotency", "\n[6/6] second keeper pass (idempotency)…");
   const res2 = await keepRound({ sdk: keeperSdk, drand, log, maxWaitSeconds: 0 }, roundId);
-  console.log("    keeper pass #2:", JSON.stringify(res2, bigintReplacer));
+  diagnostics.info("keeper-pass-2", "    keeper pass #2:", { "value1_0": JSON.stringify(res2, bigintReplacer) });
   if (res2.openedReveal) fail("second pass re-opened reveal");
   if (res2.revealed.length !== 0) fail("second pass re-revealed");
   if (!res2.skipped.some((s) => s.bidder === bidderKp.publicKey() && s.reason.includes("already revealed"))) {
     fail("second pass did not skip the already-revealed bid");
   }
-  console.log("    ✔ idempotent: nothing re-done, bid skipped as already revealed");
+  diagnostics.info("idempotent-nothing-re-done-bid-skipped-as-already-revea", "    ✔ idempotent: nothing re-done, bid skipped as already revealed");
 
-  console.log("\n✅ KEEPER E2E PASSED — waited for R, opened with real Drand sig, revealed, idempotent.");
-  console.log("   contract:", contractId, "round:", roundId.toString());
+  diagnostics.info("keeper-e2e-passed-waited-for-r-opened-with-real-drand-s", "\n✅ KEEPER E2E PASSED — waited for R, opened with real Drand sig, revealed, idempotent.");
+  diagnostics.info("contract", "   contract:", { "contractId_0": contractId, "value2_1": "round:", "value3_2": roundId.toString() });
 }
 
 function bigintReplacer(_k: string, v: unknown): unknown {
@@ -168,7 +170,7 @@ function bigintReplacer(_k: string, v: unknown): unknown {
 }
 
 main().catch((err) => {
-  console.error("\n❌ KEEPER E2E FAILED");
-  console.error(err);
+  diagnostics.error("keeper-e2e-failed", "\n❌ KEEPER E2E FAILED");
+  diagnostics.error("progress-3", err);
   process.exit(1);
 });

@@ -1,4 +1,6 @@
 // Copyright (c) 2026 Sub Rosa contributors
+import { createLogger } from '../packages/logging/src/index.cjs';
+const diagnostics = createLogger("scripts.check-fixture-sizes");
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 
@@ -87,16 +89,14 @@ function main() {
     // vacio" se arreglan distinto, y un solo mensaje para los dos te obliga a
     // ir a mirar cual de los dos fue.
     if (!result.dirExists) {
-      console.log(`  [FAIL] ${group.label} — required fixture directory is missing: ${group.dir}`);
+      diagnostics.info("fail", `  [FAIL] ${group.label} — required fixture directory is missing: ${group.dir}`);
       allPassed = false;
       continue;
     }
 
     if (result.files.length === 0) {
-      console.log(
-        `  [FAIL] ${group.label} — required fixture directory has no matching files: ` +
-          `${group.dir} (expected files matching ${group.include})`,
-      );
+      diagnostics.info("progress", `  [FAIL] ${group.label} — required fixture directory has no matching files: ` +
+          `${group.dir} (expected files matching ${group.include})`);
       allPassed = false;
       continue;
     }
@@ -104,16 +104,16 @@ function main() {
     const perFileLimit = formatBytes(group.perFileBytes);
     const totalLimit = formatBytes(group.totalBytes);
 
-    console.log(`\n${result.label}  (per-file ≤ ${perFileLimit}, total ≤ ${totalLimit})`);
-    console.log("-".repeat(60));
+    diagnostics.info("progress-2", `\n${result.label}  (per-file ≤ ${perFileLimit}, total ≤ ${totalLimit})`);
+    diagnostics.info("progress-3", "-".repeat(60));
 
     for (const f of result.files) {
       const tag = f.ok ? "PASS" : "FAIL";
       const size = formatBytes(f.bytes);
       if (f.ok) {
-        console.log(`  [${tag}]  ${size.padStart(10)}  ${f.path}`);
+        diagnostics.info("progress-4", `  [${tag}]  ${size.padStart(10)}  ${f.path}`);
       } else {
-        console.log(`  [${tag}]  ${size.padStart(10)}  ${f.path}  (limit ${perFileLimit})`);
+        diagnostics.info("progress-5", `  [${tag}]  ${size.padStart(10)}  ${f.path}  (limit ${perFileLimit})`);
         allPassed = false;
       }
     }
@@ -121,17 +121,17 @@ function main() {
     const totalTag = result.totalOk ? "PASS" : "FAIL";
     const groupTag = result.ok ? "PASS" : "FAIL";
     const totalSize = formatBytes(result.totalBytes);
-    console.log(`  [${totalTag}]  ${totalSize.padStart(10)}  total  (limit ${totalLimit})`);
-    console.log(`  Group: [${groupTag}]`);
+    diagnostics.info("progress-6", `  [${totalTag}]  ${totalSize.padStart(10)}  total  (limit ${totalLimit})`);
+    diagnostics.info("group", `  Group: [${groupTag}]`);
   }
 
-  console.log("");
+  diagnostics.info("progress-7", "");
   if (allPassed) {
-    console.log("All fixture size budgets are within limits.");
+    diagnostics.info("all-fixture-size-budgets-are-within-limits", "All fixture size budgets are within limits.");
     process.exit(0);
   } else {
-    console.log("Fixture check failed: a budget was exceeded or a required group is missing.");
-    console.log("To update budgets, edit GROUPS in scripts/check-fixture-sizes.mjs.");
+    diagnostics.info("fixture-check-failed-a-budget-was-exceeded-or-a-require", "Fixture check failed: a budget was exceeded or a required group is missing.");
+    diagnostics.info("to-update-budgets-edit-groups-in-scripts-check-fixture", "To update budgets, edit GROUPS in scripts/check-fixture-sizes.mjs.");
     process.exit(1);
   }
 }

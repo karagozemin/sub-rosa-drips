@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import { createLogger } from '../packages/logging/src/index.cjs';
+const diagnostics = createLogger("scripts.run-ts-coverage");
 /**
  * Collect Node.js test-runner line coverage across packages/* and services/*,
  * include unexecuted source files as uncovered, and fail when the
@@ -268,11 +270,9 @@ function runWorkspaceCoverage(relPath, root = ROOT) {
 function main() {
   const { lineThresholdPercent, workspaces } = loadConfig();
 
-  console.log("Sub Rosa TypeScript coverage (packages/* + services/*)\n");
-  console.log(
-    `Configured minimum weighted line coverage: ${lineThresholdPercent}%\n`,
-  );
-  console.log(`Node ${process.version}\n`);
+  diagnostics.info("sub-rosa-typescript-coverage-packages-services", "Sub Rosa TypeScript coverage (packages/* + services/*)\n");
+  diagnostics.info("configured-minimum-weighted-line-coverage", `Configured minimum weighted line coverage: ${lineThresholdPercent}%\n`);
+  diagnostics.info("node", `Node ${process.version}\n`);
 
   /** @type {WorkspaceCoverage[]} */
   const rows = [];
@@ -280,34 +280,26 @@ function main() {
     process.stdout.write(`Running coverage: ${workspace} ... `);
     const totals = runWorkspaceCoverage(workspace);
     rows.push({ workspace, ...totals });
-    console.log(
-      `${totals.percent.toFixed(2)}% lines (${totals.covered}/${totals.total})`,
-    );
+    diagnostics.info("progress", `${totals.percent.toFixed(2)}% lines (${totals.covered}/${totals.total})`);
   }
 
   const aggregate = aggregateCoverage(rows);
 
-  console.log("\nCoverage summary");
-  console.log("----------------");
+  diagnostics.info("coverage-summary", "\nCoverage summary");
+  diagnostics.info("progress-2", "----------------");
   for (const row of rows) {
-    console.log(
-      `${row.workspace.padEnd(32)} ${row.percent.toFixed(2)}%  (${row.covered}/${row.total})`,
-    );
+    diagnostics.info("progress-3", `${row.workspace.padEnd(32)} ${row.percent.toFixed(2)}%  (${row.covered}/${row.total})`);
   }
-  console.log("----------------");
-  console.log(
-    `${"aggregate (weighted)".padEnd(32)} ${aggregate.percent.toFixed(2)}%  (${aggregate.covered}/${aggregate.total})`,
-  );
-  console.log(`threshold                        ${lineThresholdPercent.toFixed(2)}%`);
+  diagnostics.info("progress-4", "----------------");
+  diagnostics.info("progress-5", `${"aggregate (weighted)".padEnd(32)} ${aggregate.percent.toFixed(2)}%  (${aggregate.covered}/${aggregate.total})`);
+  diagnostics.info("threshold", `threshold                        ${lineThresholdPercent.toFixed(2)}%`);
 
   if (aggregate.percent < lineThresholdPercent) {
-    console.error(
-      `\n❌ Weighted line coverage ${aggregate.percent.toFixed(2)}% is below threshold ${lineThresholdPercent}%.`,
-    );
+    diagnostics.error("weighted-line-coverage", `\n❌ Weighted line coverage ${aggregate.percent.toFixed(2)}% is below threshold ${lineThresholdPercent}%.`);
     process.exit(1);
   }
 
-  console.log("\n✅ Coverage gate passed.");
+  diagnostics.info("coverage-gate-passed", "\n✅ Coverage gate passed.");
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {

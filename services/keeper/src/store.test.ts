@@ -155,3 +155,21 @@ describe("KeeperStore", () => {
     cleanUp();
   });
 });
+
+it("captures store diagnostics through an injected logger", () => {
+  const temporary = fs.mkdtempSync(path.join(process.cwd(), ".logger-store-"));
+  const storePath = path.join(temporary, "store.json");
+  const captured: unknown[] = [];
+  const logger = {
+    debug: () => {}, info: () => {}, error: (...args: unknown[]) => captured.push(args),
+    warn: (...args: unknown[]) => captured.push(args),
+  };
+  try {
+    fs.writeFileSync(storePath, JSON.stringify({ rounds: { broken: null } }));
+    const store = new KeeperStore(storePath, logger);
+    assert.deepEqual(store.listRounds(), []);
+    assert.strictEqual(captured.length, 1);
+  } finally {
+    fs.rmSync(temporary, { recursive: true, force: true });
+  }
+});

@@ -1,3 +1,5 @@
+import { createLogger } from '@sub-rosa/logging';
+const diagnostics = createLogger("services.appraisal-api.scripts.x402-e2e");
 // Live x402 e2e on testnet.
 //
 // Starts the appraisal API in-process (self-facilitating over real Soroban RPC),
@@ -46,10 +48,10 @@ async function main() {
 
   const clientPub = Keypair.fromSecret(clientSecret).publicKey();
   const serverPub = Keypair.fromSecret(serverSecret).publicKey();
-  console.log("· payer (agent):", clientPub);
-  console.log("· resource server:", serverPub);
-  console.log("· facilitator:", Keypair.fromSecret(facilitatorSecret).publicKey());
-  console.log("· token:", usdcSac, "price:", price, "USDC/call");
+  diagnostics.info("payer-agent", "· payer (agent):", { "clientPub_0": clientPub });
+  diagnostics.info("resource-server", "· resource server:", { "serverPub_0": serverPub });
+  diagnostics.info("facilitator", "· facilitator:", { "value1_0": Keypair.fromSecret(facilitatorSecret).publicKey() });
+  diagnostics.info("token", "· token:", { "usdcSac_0": usdcSac, "value2_1": "price:", "price_2": price, "value4_3": "USDC/call" });
 
   // USDC balance reader (read-only SAC `balance(id)` simulation).
   const server = new rpc.Server(RPC_URL);
@@ -66,7 +68,7 @@ async function main() {
   };
 
   // ── 1. Start the x402-gated appraisal API in-process ───────────────────
-  console.log("\n[1/5] starting appraisal API (self-facilitating on testnet)…");
+  diagnostics.info("1-5-starting-appraisal-api-self-facilitating-on-testnet", "\n[1/5] starting appraisal API (self-facilitating on testnet)…");
   const api = await buildAppraisalServer({
     facilitatorSecret,
     payTo: serverPub,
@@ -79,7 +81,7 @@ async function main() {
   await new Promise<void>((resolve) => api.listen(0, "127.0.0.1", () => resolve()));
   const port = (api.address() as AddressInfo).port;
   const url = `http://127.0.0.1:${port}/appraise`;
-  console.log("    ✔ listening on", url);
+  diagnostics.info("listening-on", "    ✔ listening on", { "url_0": url });
 
   try {
     const item = {
@@ -90,7 +92,7 @@ async function main() {
     };
 
     // ── 2. Unpaid call must be rejected with 402 ─────────────────────────
-    console.log("\n[2/5] unpaid call → expect HTTP 402…");
+    diagnostics.info("2-5-unpaid-call-expect-http-402", "\n[2/5] unpaid call → expect HTTP 402…");
     const unpaid = await fetch(url, {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -98,13 +100,13 @@ async function main() {
     });
     if (unpaid.status !== 402) fail(`expected 402, got ${unpaid.status}`);
     const offer = await unpaid.json();
-    console.log("    ✔ 402 with accepts:", JSON.stringify(offer.accepts ?? offer));
+    diagnostics.info("402-with-accepts", "    ✔ 402 with accepts:", { "value1_0": JSON.stringify(offer.accepts ?? offer) });
 
     // ── 3. Record balances, then pay ─────────────────────────────────────
     const before = { client: await balanceOf(clientPub), server: await balanceOf(serverPub) };
-    console.log("\n[3/5] initial USDC:", { agent: usdc(before.client), server: usdc(before.server) });
+    diagnostics.info("3-5-initial-usdc", "\n[3/5] initial USDC:", { "value1_0": { agent: usdc(before.client), server: usdc(before.server) } });
 
-    console.log("\n[4/5] paid call → sign auth entry, settle on-chain, get appraisal…");
+    diagnostics.info("4-5-paid-call-sign-auth-entry-settle-on-chain-get-appra", "\n[4/5] paid call → sign auth entry, settle on-chain, get appraisal…");
     const paidFetch = createPaidFetch({ secret: clientSecret, network: X402_NETWORK as `${string}:${string}`, rpcUrl: RPC_URL });
     const result = await paidFetch<{ appraisal: ReturnType<typeof appraise>; payment: { transaction: string; payer: string } }>(
       url,
@@ -120,20 +122,20 @@ async function main() {
       throw new Error(`x402 e2e: settlement not successful: ${JSON.stringify(settlement)}`);
     }
     if (!settlement.transaction) fail("settlement missing transaction hash");
-    console.log("    ✔ settled on-chain, tx:", settlement.transaction);
-    console.log("    ✔ payer:", settlement.payer);
+    diagnostics.info("settled-on-chain-tx", "    ✔ settled on-chain, tx:", { "transaction_0": settlement.transaction });
+    diagnostics.info("payer", "    ✔ payer:", { "payer_0": settlement.payer });
 
     // Appraisal must equal the deterministic model output for these inputs.
     const expected = appraise(parseAppraisalRequest(item));
     if (JSON.stringify(result.body.appraisal) !== JSON.stringify(expected)) {
       fail(`appraisal mismatch:\n got ${JSON.stringify(result.body.appraisal)}\n exp ${JSON.stringify(expected)}`);
     }
-    console.log("    ✔ appraisal matches model: fairValue", expected.fairValue, "suggestedMaxBid", expected.suggestedMaxBid);
+    diagnostics.info("appraisal-matches-model-fairvalue", "    ✔ appraisal matches model: fairValue", { "fairValue_0": expected.fairValue, "value2_1": "suggestedMaxBid", "suggestedMaxBid_2": expected.suggestedMaxBid });
 
     // ── 5. Balance checks — exact price moved agent → server ─────────────
-    console.log("\n[5/5] verifying on-chain transfer…");
+    diagnostics.info("5-5-verifying-on-chain-transfer", "\n[5/5] verifying on-chain transfer…");
     const after = { client: await balanceOf(clientPub), server: await balanceOf(serverPub) };
-    console.log("    final USDC:", { agent: usdc(after.client), server: usdc(after.server) });
+    diagnostics.info("final-usdc", "    final USDC:", { "value1_0": { agent: usdc(after.client), server: usdc(after.server) } });
     const priceStroops = BigInt(Math.round(price * 1e7));
     if (before.client - after.client !== priceStroops) {
       fail(`agent debit ${before.client - after.client} != price ${priceStroops}`);
@@ -141,16 +143,16 @@ async function main() {
     if (after.server - before.server !== priceStroops) {
       fail(`server credit ${after.server - before.server} != price ${priceStroops}`);
     }
-    console.log(`    ✔ exactly ${price} USDC moved agent → resource server on-chain`);
+    diagnostics.info("exactly", `    ✔ exactly ${price} USDC moved agent → resource server on-chain`);
 
-    console.log("\n✅ x402 E2E PASSED — 402 → signed USDC payment → on-chain settle → appraisal.");
+    diagnostics.info("x402-e2e-passed-402-signed-usdc-payment-on-chain-settle", "\n✅ x402 E2E PASSED — 402 → signed USDC payment → on-chain settle → appraisal.");
   } finally {
     await new Promise<void>((resolve) => api.close(() => resolve()));
   }
 }
 
 main().catch((err) => {
-  console.error("\n❌ x402 E2E FAILED");
-  console.error(err);
+  diagnostics.error("x402-e2e-failed", "\n❌ x402 E2E FAILED");
+  diagnostics.error("progress", err);
   process.exit(1);
 });

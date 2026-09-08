@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 // Copyright (c) 2026 Sub Rosa contributors
+import { createLogger } from '../packages/logging/src/index.cjs';
+const diagnostics = createLogger("scripts.check-deploy-docs");
 // scripts/check-deploy-docs.mjs
 //
 // Lightweight text-based smoke test that keeps docs/DEPLOY.md copy-pasteable.
@@ -159,19 +161,19 @@ function main() {
 
   const failures = [];
 
-  console.log("docs/DEPLOY.md -> env references");
-  console.log("-".repeat(60));
+  diagnostics.info("docs-deploy-md-env-references", "docs/DEPLOY.md -> env references");
+  diagnostics.info("progress", "-".repeat(60));
   for (const v of envVars) {
     const isVite = v.startsWith("VITE_");
     const where = isVite ? "apps/web/.env.example" : "root .env.example";
     const ok = isVite ? webAllowed.has(v) : rootAllowed.has(v);
     const tag = ok ? "PASS" : "FAIL";
-    console.log(`  [${tag}]  ${v}` + (ok ? "" : `  (missing in ${where})`));
+    diagnostics.info("progress-2", `  [${tag}]  ${v}` + (ok ? "" : `  (missing in ${where})`));
     if (!ok) failures.push({ kind: "env", name: v, where });
   }
 
-  console.log("\ndocs/DEPLOY.md -> pnpm commands");
-  console.log("-".repeat(60));
+  diagnostics.info("docs-deploy-md-pnpm-commands", "\ndocs/DEPLOY.md -> pnpm commands");
+  diagnostics.info("progress-3", "-".repeat(60));
   for (const c of commands) {
     let ok = false;
     let where = "";
@@ -184,20 +186,18 @@ function main() {
       where = `${c.pkg} \`scripts\``;
     }
     const tag = ok ? "PASS" : "FAIL";
-    console.log(`  [${tag}]  ${c.spec}` + (ok ? "" : `  (missing in ${where})`));
+    diagnostics.info("progress-4", `  [${tag}]  ${c.spec}` + (ok ? "" : `  (missing in ${where})`));
     if (!ok) failures.push({ kind: "cmd", spec: c.spec, where });
   }
 
-  console.log("");
+  diagnostics.info("progress-5", "");
   if (failures.length === 0) {
-    console.log(
-      "PASS: docs/DEPLOY.md references are consistent with .env.example files and package.json scripts.",
-    );
+    diagnostics.info("pass-docs-deploy-md-references-are-consistent-with-env", "PASS: docs/DEPLOY.md references are consistent with .env.example files and package.json scripts.");
     return 0;
   }
-  console.log(`FAIL: ${failures.length} inconsistent reference(s) in docs/DEPLOY.md.`);
-  console.log("  - add the missing env var to the appropriate .env.example file, or");
-  console.log("  - add the missing script to root package.json / the workspace package.json.");
+  diagnostics.info("fail", `FAIL: ${failures.length} inconsistent reference(s) in docs/DEPLOY.md.`);
+  diagnostics.info("add-the-missing-env-var-to-the-appropriate-env-example", "  - add the missing env var to the appropriate .env.example file, or");
+  diagnostics.info("add-the-missing-script-to-root-package-json-the-workspa", "  - add the missing script to root package.json / the workspace package.json.");
   return 1;
 }
 
