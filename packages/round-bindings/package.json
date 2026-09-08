@@ -4,6 +4,11 @@
   "private": true,
   "type": "module",
   "description": "Generated TypeScript bindings for the Sub Rosa Round contract (spec-accurate; do not hand-edit).",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Sub-Rosa-Issue/sub-rosa-issue.git",
+    "directory": "packages/round-bindings"
+  },
   "main": "src/index.ts",
   "types": "src/index.ts",
   "exports": {

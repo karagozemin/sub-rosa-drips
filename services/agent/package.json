@@ -4,6 +4,11 @@
   "private": true,
   "type": "module",
   "description": "Autonomous sealed-bid agents. Each agent holds a principal-signed session mandate (scoped caps), pays the x402 appraisal API per call, sizes a bid from the appraisal, and commits over Soroban RPC with its session key — no relayer, no mock.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Sub-Rosa-Issue/sub-rosa-issue.git",
+    "directory": "services/agent"
+  },
   "main": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",

@@ -4,6 +4,11 @@
   "private": true,
   "type": "module",
   "description": "Injectable clock and scheduler abstractions for deterministic Sub Rosa runtime and tests.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Sub-Rosa-Issue/sub-rosa-issue.git",
+    "directory": "packages/time"
+  },
   "main": "src/index.ts",
   "types": "src/index.ts",
   "exports": {
