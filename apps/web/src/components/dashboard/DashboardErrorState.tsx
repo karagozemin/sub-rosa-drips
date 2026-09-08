@@ -7,9 +7,11 @@ export function DashboardErrorState({
   onRetry: () => void;
 }) {
   return (
-    <div className="dashboard-error-state">
+    <div className="dashboard-error-state" role="alert">
       <div className="dashboard-error-icon">
         <svg
+          aria-hidden="true"
+          focusable="false"
           width="48"
           height="48"
           viewBox="0 0 24 24"
