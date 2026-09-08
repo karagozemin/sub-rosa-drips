@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import { rpc } from "@stellar/stellar-sdk";
 import {
   AssembledTransaction,

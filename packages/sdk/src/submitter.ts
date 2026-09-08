@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import { SubRosaSubmitError } from "./errors.js";
 
 export interface SubmittedTransaction {

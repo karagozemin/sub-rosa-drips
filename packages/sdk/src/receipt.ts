@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 // Canonical round receipt — deterministic, versioned, offline-verifiable.
 //
 // Every bigint is serialized as a decimal string; every byte sequence as

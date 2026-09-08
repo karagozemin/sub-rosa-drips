@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 // SubRosaClient — a thin, ergonomic, spec-accurate wrapper over the generated
 // Round contract bindings. Direct Soroban RPC is the default submission path;
 // callers can optionally inject a submitter (for example OZ Relayer Channels)

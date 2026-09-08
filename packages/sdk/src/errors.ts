@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 export class SubRosaClientConfigError extends Error {
   readonly name = "SubRosaClientConfigError";
 

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 // Encrypted blob validation — size, content-type, and encoding checks.
 //
 // The contract enforces a 4096-byte maximum for ciphertext (Soroban Temporary

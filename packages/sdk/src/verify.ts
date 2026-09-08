@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 // Offline round-receipt verifier.
 //
 // Every check is stateless — no RPC, no secrets. The verifier recomputes
