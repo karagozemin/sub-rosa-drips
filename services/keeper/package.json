@@ -4,6 +4,11 @@
   "private": true,
   "type": "module",
   "description": "Permissionless reveal keeper: waits for Drand round R, opens the reveal window with R's real signature, then decrypts and reveals every sealed bid. Idempotent; no relayer, no agent, no mock.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Sub-Rosa-Issue/sub-rosa-issue.git",
+    "directory": "services/keeper"
+  },
   "main": "src/index.ts",
   "scripts": {
     "start": "node --import tsx src/run.ts",

@@ -4,6 +4,11 @@
   "private": true,
   "type": "module",
   "description": "Sealed auction demo UI — lifecycle, observer, agents, x402, keeper, seal-off vs seal-on attack, mandate cap safety lab.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Sub-Rosa-Issue/sub-rosa-issue.git",
+    "directory": "apps/web"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",

@@ -4,6 +4,11 @@
   "private": true,
   "type": "module",
   "description": "Deterministic round-receipt exporter and offline verifier.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Sub-Rosa-Issue/sub-rosa-issue.git",
+    "directory": "services/receipt-cli"
+  },
   "bin": {
     "receipt-cli": "src/index.ts"
   },

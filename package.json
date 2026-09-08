@@ -4,6 +4,10 @@
   "private": true,
   "description": "Escrow-backed sealed auction infrastructure for Stellar.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Sub-Rosa-Issue/sub-rosa-issue.git"
+  },
   "packageManager": "pnpm@10.13.1",
   "engines": {
     "node": ">=22"

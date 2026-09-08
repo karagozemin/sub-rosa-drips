@@ -4,6 +4,11 @@
   "private": true,
   "type": "module",
   "description": "x402-gated appraisal API. Agents pay per call in USDC (SEP-41) over Soroban; the server self-facilitates — verifies the signed payment and settles on-chain via RPC (no relayer, no mock) — then returns a deterministic valuation used to size a sealed bid.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Sub-Rosa-Issue/sub-rosa-issue.git",
+    "directory": "services/appraisal-api"
+  },
   "main": "src/index.ts",
   "scripts": {
     "start": "node --import tsx src/run.ts",
