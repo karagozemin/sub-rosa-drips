@@ -7,6 +7,7 @@ const diagnostics = createLogger("services.receipt-cli.src.index");
 import { readFileSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { SubRosaClient, parseReceipt, serializeReceipt, verifyReceipt, redactReceipt } from "@sub-rosa/sdk";
+import { runCommand, CommandError } from "@sub-rosa/command";
 import { buildJsonOutput } from "./json-output.js";
 
 function usage(): never {
@@ -26,10 +27,10 @@ Environment for "export":
   NETWORK_PASSPHRASE       Network passphrase (default: Test SDF Network ; September 2015)
   CONTRACT_ID              Round contract ID (C…)
 `);
-  process.exit(1);
+  throw new CommandError("Invalid receipt-cli invocation", 1);
 }
 
-async function cmdExport(roundIdStr: string) {
+async function cmdExport(roundIdStr: string): Promise<number> {
   const roundId = BigInt(roundIdStr);
   const rpcUrl = process.env.RPC_URL ?? "https://soroban-testnet.stellar.org";
   const networkPassphrase =
@@ -37,7 +38,7 @@ async function cmdExport(roundIdStr: string) {
   const contractId = process.env.CONTRACT_ID;
   if (!contractId) {
     diagnostics.error("contract-id-env-var-is-required-for-export", "CONTRACT_ID env var is required for export");
-    process.exit(1);
+    return 1;
   }
 
   const client = new SubRosaClient({ rpcUrl, networkPassphrase, contractId });
@@ -46,9 +47,10 @@ async function cmdExport(roundIdStr: string) {
   const filename = `round-${roundId}-receipt.json`;
   writeFileSync(filename, json, "utf-8");
   diagnostics.info("wrote", `Wrote ${filename}`);
+  return 0;
 }
 
-async function cmdVerify(path: string, jsonMode: boolean, artifactPath?: string) {
+async function cmdVerify(path: string, jsonMode: boolean, artifactPath?: string): Promise<number> {
   let rawJson: string;
   try {
     rawJson = readFileSync(path, "utf-8");
@@ -58,7 +60,7 @@ async function cmdVerify(path: string, jsonMode: boolean, artifactPath?: string)
     } else {
       diagnostics.error("cannot-read", `Cannot read ${path}: ${e}`);
     }
-    process.exit(1);
+    return 1;
   }
 
   let receipt;
@@ -70,7 +72,7 @@ async function cmdVerify(path: string, jsonMode: boolean, artifactPath?: string)
     } else {
       diagnostics.error("invalid-json", `Invalid JSON: ${e}`);
     }
-    process.exit(1);
+    return 1;
   }
 
   const result = verifyReceipt(receipt);
@@ -94,7 +96,7 @@ async function cmdVerify(path: string, jsonMode: boolean, artifactPath?: string)
       } else {
         diagnostics.error("error", `Error: ${message}`);
       }
-      process.exit(1);
+      return 1;
     }
 
     if (!receipt.artifactChecksum) {
@@ -110,7 +112,7 @@ async function cmdVerify(path: string, jsonMode: boolean, artifactPath?: string)
       } else {
         diagnostics.error("error-2", `Error: ${message}`);
       }
-      process.exit(1);
+      return 1;
     }
 
     if (receipt.artifactChecksum !== computedChecksum) {
@@ -126,13 +128,13 @@ async function cmdVerify(path: string, jsonMode: boolean, artifactPath?: string)
       } else {
         diagnostics.error("error-3", `Error: ${message}`);
       }
-      process.exit(1);
+      return 1;
     }
   }
 
   if (jsonMode) {
     writeData(JSON.stringify(buildJsonOutput(receipt, result, null), null, 2));
-    process.exit(result.valid ? 0 : 1);
+    return result.valid ? 0 : 1;
   }
 
   const status = result.valid ? "PASS" : "FAIL";
@@ -148,16 +150,16 @@ async function cmdVerify(path: string, jsonMode: boolean, artifactPath?: string)
     diagnostics.info("progress-7", `  ${icon} [${issue.code}]${pathStr} ${issue.message}`);
   }
 
-  process.exit(result.valid ? 0 : 1);
+  return result.valid ? 0 : 1;
 }
 
-async function cmdRedact(inputPath: string, outputPath?: string) {
+async function cmdRedact(inputPath: string, outputPath?: string): Promise<number> {
   let json: string;
   try {
     json = readFileSync(inputPath, "utf-8");
   } catch (e) {
     diagnostics.error("cannot-read-2", `Cannot read ${inputPath}: ${e}`);
-    process.exit(1);
+    return 1;
   }
 
   let receipt;
@@ -165,7 +167,7 @@ async function cmdRedact(inputPath: string, outputPath?: string) {
     receipt = parseReceipt(json);
   } catch (e) {
     diagnostics.error("invalid-json-2", `Invalid JSON: ${e}`);
-    process.exit(1);
+    return 1;
   }
 
   const redacted = redactReceipt(receipt);
@@ -173,51 +175,45 @@ async function cmdRedact(inputPath: string, outputPath?: string) {
   const outPath = outputPath ?? inputPath.replace(/\.json$/, ".redacted.json");
   writeFileSync(outPath, out, "utf-8");
   diagnostics.info("wrote-redacted-receipt-to", `Wrote redacted receipt to ${outPath}`);
+  return 0;
 }
 
-async function main() {
-  const cmd = process.argv[2];
-  if (!cmd) usage();
-
-  switch (cmd) {
-    case "export": {
-      const arg = process.argv[3];
-      if (!arg) usage();
-      await cmdExport(arg);
-      break;
-    }
-    case "verify": {
-      const args = process.argv.slice(3);
-      const jsonMode = args.includes("--json");
-      const verifyChecksumIdx = args.indexOf("--verify-artifact-checksum");
-      let artifactPath: string | undefined = undefined;
-      let filteredArgs = [...args];
-      if (verifyChecksumIdx !== -1) {
-        const nextArg = args[verifyChecksumIdx + 1];
-        if (nextArg && !nextArg.startsWith("--")) {
-          artifactPath = nextArg;
-          filteredArgs.splice(verifyChecksumIdx, 2);
-        } else {
-          usage();
-        }
-      }
-      const path = filteredArgs.find((a) => !a.startsWith("--"));
-      if (!path) usage();
-      await cmdVerify(path, jsonMode, artifactPath);
-      break;
-    }
-    case "redact": {
-      const arg = process.argv[3];
-      if (!arg) usage();
-      await cmdRedact(arg, process.argv[4]);
-      break;
-    }
-    default:
+runCommand({
+  name: "services.receipt-cli",
+  description: "Export a round receipt from RPC, verify a local file, or redact sensitive fields",
+  usage: "receipt-cli <export|verify|redact> [options]",
+  options: {
+    json: { type: "boolean" },
+    "verify-artifact-checksum": { type: "string" },
+  },
+  async run(ctx) {
+    const [cmd] = ctx.positionals;
+    if (!cmd) {
       usage();
-  }
-}
+    }
 
-main().catch((e) => {
-  diagnostics.error("progress-8", e);
-  process.exit(1);
+    switch (cmd) {
+      case "export": {
+        const arg = ctx.positionals[1];
+        if (!arg) usage();
+        return await cmdExport(arg);
+      }
+      case "verify": {
+        const path = ctx.positionals[1];
+        if (!path) usage();
+        const jsonMode = Boolean(ctx.options.json);
+        const artifactPath = typeof ctx.options["verify-artifact-checksum"] === "string"
+          ? ctx.options["verify-artifact-checksum"]
+          : undefined;
+        return await cmdVerify(path, jsonMode, artifactPath);
+      }
+      case "redact": {
+        const arg = ctx.positionals[1];
+        if (!arg) usage();
+        return await cmdRedact(arg, ctx.positionals[2]);
+      }
+      default:
+        usage();
+    }
+  },
 });

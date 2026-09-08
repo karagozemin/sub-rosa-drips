@@ -8,7 +8,14 @@ packageExtensionsChecksum: sha256-Z9PoklkhhwcDAg079Of1cxD2PjhVdMMdBUjh59gsj38=
 
 importers:
 
-  .: {}
+  .:
+    devDependencies:
+      '@sub-rosa/command':
+        specifier: workspace:*
+        version: link:packages/command
+      '@sub-rosa/logging':
+        specifier: workspace:*
+        version: link:packages/logging
 
   apps/web:
     dependencies:
@@ -83,6 +90,25 @@ importers:
         specifier: ^6.3.5
         version: 6.4.3(@types/node@25.9.1)(tsx@4.22.4)
 
+  packages/command:
+    dependencies:
+      '@sub-rosa/logging':
+        specifier: workspace:*
+        version: link:../logging
+      '@sub-rosa/time':
+        specifier: workspace:*
+        version: link:../time
+    devDependencies:
+      '@types/node':
+        specifier: ^25.9.1
+        version: 25.9.1
+      tsx:
+        specifier: ^4.22.4
+        version: 4.22.4
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+
   packages/logging: {}
 
   packages/round-bindings:
@@ -112,6 +138,9 @@ importers:
       '@stellar/stellar-sdk':
         specifier: ^15.1.0
         version: 15.1.0
+      '@sub-rosa/command':
+        specifier: workspace:*
+        version: link:../command
       '@sub-rosa/logging':
         specifier: workspace:*
         version: link:../logging
@@ -158,6 +187,12 @@ importers:
       '@noble/hashes':
         specifier: ^2.2.0
         version: 2.2.0
+      '@sub-rosa/command':
+        specifier: workspace:*
+        version: link:../command
+      '@sub-rosa/logging':
+        specifier: workspace:*
+        version: link:../logging
       '@sub-rosa/time':
         specifier: workspace:*
         version: link:../time
@@ -186,6 +221,9 @@ importers:
       '@sub-rosa/appraisal-api':
         specifier: workspace:*
         version: link:../appraisal-api
+      '@sub-rosa/command':
+        specifier: workspace:*
+        version: link:../../packages/command
       '@sub-rosa/keeper':
         specifier: workspace:*
         version: link:../keeper
@@ -220,6 +258,9 @@ importers:
       '@stellar/stellar-sdk':
         specifier: ^15.1.0
         version: 15.1.0
+      '@sub-rosa/command':
+        specifier: workspace:*
+        version: link:../../packages/command
       '@sub-rosa/logging':
         specifier: workspace:*
         version: link:../../packages/logging
@@ -242,6 +283,9 @@ importers:
 
   services/auction-template:
     dependencies:
+      '@sub-rosa/command':
+        specifier: workspace:*
+        version: link:../../packages/command
       '@sub-rosa/keeper':
         specifier: workspace:*
         version: link:../keeper
@@ -295,6 +339,9 @@ importers:
 
   services/keeper:
     dependencies:
+      '@sub-rosa/command':
+        specifier: workspace:*
+        version: link:../../packages/command
       '@sub-rosa/logging':
         specifier: workspace:*
         version: link:../../packages/logging
@@ -323,6 +370,9 @@ importers:
 
   services/receipt-cli:
     dependencies:
+      '@sub-rosa/command':
+        specifier: workspace:*
+        version: link:../../packages/command
       '@sub-rosa/logging':
         specifier: workspace:*
         version: link:../../packages/logging

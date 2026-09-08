@@ -25,6 +25,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";
+import { runCommand } from "@sub-rosa/command";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, "..");
@@ -267,8 +268,15 @@ function runWorkspaceCoverage(relPath, root = ROOT) {
   }
 }
 
-function main() {
-  const { lineThresholdPercent, workspaces } = loadConfig();
+/**
+ * Runs test coverage verification across all configured workspaces.
+ *
+ * @param {string} [configPath]
+ * @param {string} [root]
+ * @returns {number}
+ */
+export function main(configPath, root) {
+  const { lineThresholdPercent, workspaces } = loadConfig(configPath);
 
   diagnostics.info("sub-rosa-typescript-coverage-packages-services", "Sub Rosa TypeScript coverage (packages/* + services/*)\n");
   diagnostics.info("configured-minimum-weighted-line-coverage", `Configured minimum weighted line coverage: ${lineThresholdPercent}%\n`);
@@ -278,7 +286,7 @@ function main() {
   const rows = [];
   for (const workspace of workspaces) {
     process.stdout.write(`Running coverage: ${workspace} ... `);
-    const totals = runWorkspaceCoverage(workspace);
+    const totals = runWorkspaceCoverage(workspace, root);
     rows.push({ workspace, ...totals });
     diagnostics.info("progress", `${totals.percent.toFixed(2)}% lines (${totals.covered}/${totals.total})`);
   }
@@ -296,12 +304,20 @@ function main() {
 
   if (aggregate.percent < lineThresholdPercent) {
     diagnostics.error("weighted-line-coverage", `\n❌ Weighted line coverage ${aggregate.percent.toFixed(2)}% is below threshold ${lineThresholdPercent}%.`);
-    process.exit(1);
+    return 1;
   }
 
   diagnostics.info("coverage-gate-passed", "\n✅ Coverage gate passed.");
+  return 0;
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
-  main();
+  runCommand({
+    name: "scripts.run-ts-coverage",
+    description: "Collect and verify TypeScript line coverage across packages and services",
+    run(ctx) {
+      const configPath = ctx.resolvePath("coverage.config.json");
+      return main(configPath, ctx.repoRoot);
+    },
+  });
 }

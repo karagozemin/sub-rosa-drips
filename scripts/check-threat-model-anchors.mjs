@@ -19,6 +19,7 @@ const diagnostics = createLogger("scripts.check-threat-model-anchors");
 
 import { existsSync, readFileSync } from "node:fs";
 import { isAbsolute, resolve } from "node:path";
+import { runCommand } from "@sub-rosa/command";
 
 const DEFAULT_DOC = "docs/THREAT_MODEL.md";
 
@@ -82,8 +83,8 @@ const REQUIRED_ANCHORS = [
   },
 ];
 
-function loadDoc(docPath) {
-  const absolute = isAbsolute(docPath) ? docPath : resolve(process.cwd(), docPath);
+function loadDoc(docPath, repoRoot) {
+  const absolute = isAbsolute(docPath) ? docPath : resolve(repoRoot, docPath);
   if (!existsSync(absolute)) {
     return { content: null, path: absolute };
   }
@@ -99,14 +100,20 @@ function checkAnchor(anchor, content) {
   return { matched: null };
 }
 
-function main() {
-  const docPath = process.argv[2] || DEFAULT_DOC;
-  const { content, path } = loadDoc(docPath);
+/**
+ * Validates that required threat model anchors are present in the documentation.
+ *
+ * @param {string} docPath
+ * @param {string} repoRoot
+ * @returns {number}
+ */
+export function main(docPath, repoRoot) {
+  const { content, path } = loadDoc(docPath, repoRoot);
 
   if (content === null) {
     diagnostics.error("fail", `[FAIL] ${docPath} not found at ${path}`);
     diagnostics.error("threat-model-anchor-coverage-check-cannot-run-without-t", "Threat model anchor coverage check cannot run without the doc.");
-    process.exit(1);
+    return 1;
   }
 
   diagnostics.info("threat-model-anchor-coverage-for", `\nThreat model anchor coverage for ${docPath}`);
@@ -139,14 +146,24 @@ function main() {
 
   if (allPassed) {
     diagnostics.info("all", `All ${REQUIRED_ANCHORS.length} required threat model anchors are present.`);
-    process.exit(0);
-  } else {
-    diagnostics.error("progress-5", `Missing ${failures.length} required threat model anchor(s): ` +
-        failures.map((a) => a.id).join(", "));
-    diagnostics.error("either-add-coverage-under-docs-threat-model-md-or-exten", "Either add coverage under docs/THREAT_MODEL.md or extend REQUIRED_ANCHORS in");
-    diagnostics.error("scripts-check-threat-model-anchors-mjs-so-the-inventory", "scripts/check-threat-model-anchors.mjs so the inventory stays in sync.");
-    process.exit(1);
+    return 0;
   }
+
+  diagnostics.error("progress-5", `Missing ${failures.length} required threat model anchor(s): ` +
+      failures.map((a) => a.id).join(", "));
+  diagnostics.error("either-add-coverage-under-docs-threat-model-md-or-exten", "Either add coverage under docs/THREAT_MODEL.md or extend REQUIRED_ANCHORS in");
+  diagnostics.error("scripts-check-threat-model-anchors-mjs-so-the-inventory", "scripts/check-threat-model-anchors.mjs so the inventory stays in sync.");
+  return 1;
 }
 
-main();
+runCommand({
+  name: "scripts.check-threat-model-anchors",
+  description: "Check threat model anchor coverage in docs/THREAT_MODEL.md",
+  positionals: [
+    { name: "docPath", description: "Path to THREAT_MODEL.md", required: false },
+  ],
+  run(ctx) {
+    const docPath = ctx.positionals[0] || DEFAULT_DOC;
+    return main(docPath, ctx.repoRoot);
+  },
+});

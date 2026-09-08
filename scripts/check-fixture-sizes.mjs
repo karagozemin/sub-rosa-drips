@@ -2,7 +2,8 @@
 import { createLogger } from '../packages/logging/src/index.cjs';
 const diagnostics = createLogger("scripts.check-fixture-sizes");
 import { existsSync, readdirSync, statSync } from "node:fs";
-import { join, relative } from "node:path";
+import { join, relative, resolve } from "node:path";
+import { runCommand } from "@sub-rosa/command";
 
 const GROUPS = [
   {
@@ -40,9 +41,6 @@ function walk(dir, include) {
       }
     }
   } catch (error) {
-    // Un directorio ausente es normal al recorrer en profundidad. Cualquier
-    // otro error, como un permiso denegado, no lo es: tragarselo hacia que un
-    // grupo ilegible se viera igual que uno vacio.
     if (error.code !== "ENOENT" && error.code !== "ENOTDIR") throw error;
   }
   return files;
@@ -54,10 +52,11 @@ function formatBytes(bytes) {
   return `${bytes} B`;
 }
 
-function checkGroup(group) {
-  const files = walk(group.dir, group.include).map((f) => {
+function checkGroup(group, rootDir) {
+  const targetDir = resolve(rootDir, group.dir);
+  const files = walk(targetDir, group.include).map((f) => {
     const bytes = statSync(f).size;
-    return { path: relative(process.cwd(), f), bytes, ok: bytes <= group.perFileBytes };
+    return { path: relative(rootDir, f), bytes, ok: bytes <= group.perFileBytes };
   });
 
   const totalBytes = files.reduce((s, f) => s + f.bytes, 0);
@@ -67,7 +66,7 @@ function checkGroup(group) {
   return {
     label: group.label,
     dir: group.dir,
-    dirExists: existsSync(group.dir),
+    dirExists: existsSync(targetDir),
     files,
     totalBytes,
     totalOk,
@@ -75,19 +74,18 @@ function checkGroup(group) {
   };
 }
 
-function main() {
+/**
+ * Validates fixture file sizes against designated budget thresholds.
+ *
+ * @param {string} rootDir
+ * @returns {number}
+ */
+export function main(rootDir) {
   let allPassed = true;
 
   for (const group of GROUPS) {
-    const result = checkGroup(group);
+    const result = checkGroup(group, rootDir);
 
-    // Todo grupo configurado en GROUPS es obligatorio. Antes un grupo ausente
-    // o vacio salia por SKIP y el proceso terminaba en 0, asi que borrar un
-    // grupo entero desactivaba en silencio el presupuesto que lo cuidaba.
-    //
-    // Los dos casos se informan por separado a proposito: "no existe" y "esta
-    // vacio" se arreglan distinto, y un solo mensaje para los dos te obliga a
-    // ir a mirar cual de los dos fue.
     if (!result.dirExists) {
       diagnostics.info("fail", `  [FAIL] ${group.label} — required fixture directory is missing: ${group.dir}`);
       allPassed = false;
@@ -128,12 +126,22 @@ function main() {
   diagnostics.info("progress-7", "");
   if (allPassed) {
     diagnostics.info("all-fixture-size-budgets-are-within-limits", "All fixture size budgets are within limits.");
-    process.exit(0);
-  } else {
-    diagnostics.info("fixture-check-failed-a-budget-was-exceeded-or-a-require", "Fixture check failed: a budget was exceeded or a required group is missing.");
-    diagnostics.info("to-update-budgets-edit-groups-in-scripts-check-fixture", "To update budgets, edit GROUPS in scripts/check-fixture-sizes.mjs.");
-    process.exit(1);
+    return 0;
   }
+  diagnostics.info("fixture-check-failed-a-budget-was-exceeded-or-a-require", "Fixture check failed: a budget was exceeded or a required group is missing.");
+  diagnostics.info("to-update-budgets-edit-groups-in-scripts-check-fixture", "To update budgets, edit GROUPS in scripts/check-fixture-sizes.mjs.");
+  return 1;
 }
 
-main();
+runCommand({
+  name: "scripts.check-fixture-sizes",
+  description: "Verify fixture size budgets remain within limits",
+  run(ctx) {
+    const baseDir =
+      process.env.FIXTURE_CHECK_ROOT ||
+      (existsSync(resolve(process.cwd(), "services/receipt-cli/src/fixtures"))
+        ? process.cwd()
+        : ctx.repoRoot);
+    return main(baseDir);
+  },
+});

@@ -21,8 +21,20 @@ export function scanTree(base=root) {
  for(const entry of ['packages','services','apps','scripts','.github'])walk(join(base,entry));
  return hits;
 }
+import { runCommand } from '@sub-rosa/command';
+
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
- const logger=createLogger('scripts.check-logging'), violations=scanTree();
- if(violations.length){logger.error('direct-console-found','Direct console calls are forbidden',{violations});process.exitCode=1;}
- else logger.info('logging-guard-passed','No direct console calls in runtime or operational scripts');
+ runCommand({
+  name: 'scripts.check-logging',
+  description: 'Check for direct console logging calls',
+  async run() {
+   const logger=createLogger('scripts.check-logging'), violations=scanTree();
+   if(violations.length){
+    logger.error('direct-console-found','Direct console calls are forbidden',{violations});
+    return 1;
+   }
+   logger.info('logging-guard-passed','No direct console calls in runtime or operational scripts');
+   return 0;
+  }
+ });
 }

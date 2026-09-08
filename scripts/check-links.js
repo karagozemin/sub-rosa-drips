@@ -6,10 +6,8 @@ const diagnostics = createLogger("scripts.check-links");
 
 const fs = require('fs');
 const path = require('path');
+const { runCommand } = require('@sub-rosa/command');
 
-const ROOT = path.resolve(__dirname, '..');
-
-// Markdown files to scan (relative to ROOT)
 const FILES = [
   'README.md',
   'ARCHITECTURE.md',
@@ -28,12 +26,14 @@ const FILES = [
   'packages/round-bindings/README.md',
 ];
 
-// Allowlist for intentional placeholder links.
-// Format: "source-file:link-target" (both relative to ROOT).
-// Add entries here when a link is deliberately forward-looking.
 const ALLOWLIST = new Set([]);
 
-// GitHub-compatible heading slug (matches GitHub Markdown rendering)
+/**
+ * Normalizes text to a markdown header slug.
+ *
+ * @param {string} text
+ * @returns {string}
+ */
 function headingSlug(text) {
   return text
     .toLowerCase()
@@ -42,7 +42,12 @@ function headingSlug(text) {
     .replace(/\s+/g, '-');
 }
 
-// Extract all heading slugs from a markdown string
+/**
+ * Extracts all heading slugs from markdown text.
+ *
+ * @param {string} content
+ * @returns {Set<string>}
+ */
 function extractSlugs(content) {
   const slugs = new Set();
   const re = /^#{1,6}\s+(.+)$/gm;
@@ -53,8 +58,14 @@ function extractSlugs(content) {
   return slugs;
 }
 
-// Cache of slug sets keyed by absolute path
 const slugCache = new Map();
+
+/**
+ * Retrieves cached heading slugs for a given markdown file.
+ *
+ * @param {string} absPath
+ * @returns {Set<string>}
+ */
 function getSlugs(absPath) {
   if (!slugCache.has(absPath)) {
     const content = fs.readFileSync(absPath, 'utf8');
@@ -65,100 +76,110 @@ function getSlugs(absPath) {
 
 const LINK_RE = /\[([^\]]*)\]\(([^)\s]+)\)/g;
 
-let broken = 0;
-let checked = 0;
-let skipped = 0;
-const external = [];
+runCommand({
+  name: "scripts.check-links",
+  description: "Check markdown links across documentation files",
+  options: {
+    external: {
+      type: "boolean",
+      short: "e",
+      default: false,
+      description: "List external links",
+    },
+  },
+  run(ctx) {
+    const rootDir = ctx.repoRoot;
+    const showExternal = Boolean(ctx.options.external);
 
-const showExternal = process.argv.includes('--external');
+    let broken = 0;
+    let checked = 0;
+    let skipped = 0;
+    const external = [];
 
-for (const relFile of FILES) {
-  const absFile = path.join(ROOT, relFile);
+    for (const relFile of FILES) {
+      const absFile = path.join(rootDir, relFile);
 
-  if (!fs.existsSync(absFile)) {
-    diagnostics.error("error", `ERROR  ${relFile}:0 — source file not found`);
-    broken++;
-    continue;
-  }
-
-  const content = fs.readFileSync(absFile, 'utf8');
-  const lines = content.split('\n');
-  const fileDir = path.dirname(absFile);
-
-  lines.forEach((line, idx) => {
-    const lineNum = idx + 1;
-    LINK_RE.lastIndex = 0;
-    let m;
-    while ((m = LINK_RE.exec(line)) !== null) {
-      const href = m[2];
-
-      // Skip external links
-      if (/^https?:\/\/|^mailto:/.test(href)) {
-        external.push({ file: relFile, line: lineNum, href });
-        continue;
-      }
-
-      // Split path from anchor
-      const hashIdx = href.indexOf('#');
-      const filePart = hashIdx === -1 ? href : href.slice(0, hashIdx);
-      const anchor = hashIdx === -1 ? null : href.slice(hashIdx + 1);
-
-      const allowKey = `${relFile}:${href}`;
-      if (ALLOWLIST.has(allowKey)) {
-        skipped++;
-        continue;
-      }
-
-      // Pure anchor link (#section) — check within same file
-      if (!filePart) {
-        checked++;
-        const ownSlugs = getSlugs(absFile);
-        if (!ownSlugs.has(anchor)) {
-          diagnostics.error("broken", `BROKEN ${relFile}:${lineNum} — anchor #${anchor} not found in same file`);
-          broken++;
-        }
-        continue;
-      }
-
-      // Resolve file path
-      const absTarget = path.resolve(fileDir, filePart);
-
-      checked++;
-
-      if (!fs.existsSync(absTarget)) {
-        const rel = path.relative(ROOT, absTarget);
-        diagnostics.error("broken-2", `BROKEN ${relFile}:${lineNum} — file not found: ${filePart} (→ ${rel})`);
+      if (!fs.existsSync(absFile)) {
+        diagnostics.error("error", `ERROR  ${relFile}:0 — source file not found`);
         broken++;
         continue;
       }
 
-      // Check anchor in target file (only for .md files)
-      if (anchor && /\.md$/i.test(absTarget)) {
-        const targetSlugs = getSlugs(absTarget);
-        if (!targetSlugs.has(anchor.toLowerCase())) {
-          diagnostics.error("broken-3", `BROKEN ${relFile}:${lineNum} — anchor #${anchor} not found in ${path.relative(ROOT, absTarget)}`);
-          broken++;
+      const content = fs.readFileSync(absFile, 'utf8');
+      const lines = content.split('\n');
+      const fileDir = path.dirname(absFile);
+
+      lines.forEach((line, idx) => {
+        const lineNum = idx + 1;
+        LINK_RE.lastIndex = 0;
+        let m;
+        while ((m = LINK_RE.exec(line)) !== null) {
+          const href = m[2];
+
+          if (/^https?:\/\/|^mailto:/.test(href)) {
+            external.push({ file: relFile, line: lineNum, href });
+            continue;
+          }
+
+          const hashIdx = href.indexOf('#');
+          const filePart = hashIdx === -1 ? href : href.slice(0, hashIdx);
+          const anchor = hashIdx === -1 ? null : href.slice(hashIdx + 1);
+
+          const allowKey = `${relFile}:${href}`;
+          if (ALLOWLIST.has(allowKey)) {
+            skipped++;
+            continue;
+          }
+
+          if (!filePart) {
+            checked++;
+            const ownSlugs = getSlugs(absFile);
+            if (!ownSlugs.has(anchor)) {
+              diagnostics.error("broken", `BROKEN ${relFile}:${lineNum} — anchor #${anchor} not found in same file`);
+              broken++;
+            }
+            continue;
+          }
+
+          const absTarget = path.resolve(fileDir, filePart);
+
+          checked++;
+
+          if (!fs.existsSync(absTarget)) {
+            const rel = path.relative(rootDir, absTarget);
+            diagnostics.error("broken-2", `BROKEN ${relFile}:${lineNum} — file not found: ${filePart} (→ ${rel})`);
+            broken++;
+            continue;
+          }
+
+          if (anchor && /\.md$/i.test(absTarget)) {
+            const targetSlugs = getSlugs(absTarget);
+            if (!targetSlugs.has(anchor.toLowerCase())) {
+              diagnostics.error("broken-3", `BROKEN ${relFile}:${lineNum} — anchor #${anchor} not found in ${path.relative(rootDir, absTarget)}`);
+              broken++;
+            }
+          }
         }
+      });
+    }
+
+    if (external.length > 0) {
+      if (showExternal) {
+        diagnostics.info("external-links", `\nExternal links (${external.length}, not validated):`);
+        for (const { file, line, href } of external) {
+          diagnostics.info("progress", `  ${file}:${line}: ${href}`);
+        }
+      } else {
+        diagnostics.info("external-links-2", `External links: ${external.length} (pass --external to list)`);
       }
     }
-  });
-}
 
-if (external.length > 0) {
-  if (showExternal) {
-    diagnostics.info("external-links", `\nExternal links (${external.length}, not validated):`);
-    for (const { file, line, href } of external) {
-      diagnostics.info("progress", `  ${file}:${line}: ${href}`);
+    if (broken === 0) {
+      diagnostics.info("ok", `OK  ${checked} local link(s) checked, ${skipped} allowlisted`);
+      return 0;
     }
-  } else {
-    diagnostics.info("external-links-2", `External links: ${external.length} (pass --external to list)`);
-  }
-}
 
-if (broken === 0) {
-  diagnostics.info("ok", `OK  ${checked} local link(s) checked, ${skipped} allowlisted`);
-  process.exit(0);
-} else {
-  diagnostics.error("fail", `\nFAIL  ${broken} broken link(s) — fix the paths above or add to ALLOWLIST in scripts/check-links.js`);
-  process.exit(1);
-}
+    diagnostics.error("fail", `\nFAIL  ${broken} broken link(s) — fix the paths above or add to ALLOWLIST in scripts/check-links.js`);
+    return 1;
+  },
+});

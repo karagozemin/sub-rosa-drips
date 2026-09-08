@@ -25,20 +25,7 @@ const diagnostics = createLogger("scripts.check-deploy-docs");
 
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-
-// `DEPLOY_DOCS_ROOT` lets tests redirect reads to a fixture project tree.
-// In normal use, `pnpm docs:check` runs from the repo root, so process.cwd()
-// is the project root.
-const ROOT = process.env.DEPLOY_DOCS_ROOT
-  ? process.env.DEPLOY_DOCS_ROOT
-  : process.cwd();
-
-const PATHS = {
-  deployDoc: resolve(ROOT, "docs/DEPLOY.md"),
-  rootEnv: resolve(ROOT, ".env.example"),
-  webEnv: resolve(ROOT, "apps/web/.env.example"),
-  rootPkg: resolve(ROOT, "package.json"),
-};
+import { runCommand } from "@sub-rosa/command";
 
 const SKIP_PNPM = new Set(["install"]);
 
@@ -64,16 +51,15 @@ const ENV_TABLE_RE = /\|\s*`?([A-Z][A-Z0-9_]{2,})`?\s*\|/g;
 // `pnpm --filter @scope/pkg <cmd>` (matches if and only if `--filter` is present)
 const PNPM_FILTER_RE = /\bpnpm\s+--filter\s+(\S+)\s+([a-z][a-z0-9_.:-]*)/g;
 
-// `pnpm <cmd>` where <cmd> is a top-level script key (e.g. `pnpm web:build`).
-// Does not match `pnpm --filter ...`.
-const PNPM_PLAIN_RE = /\bpnpm\s+(?!--filter\b)([a-z][a-z0-9_.:-]*)/g;
+const TABLE_ENV_RE = /\|\s*`?([A-Z][A-Z0-9_]{2,})`?\s*\|/g;
+const PNPM_CMD_RE = /\bpnpm(?:\s+--filter\s+(\S+))?\s+([a-z][a-z0-9_.:-]*)/g;
 
 // Walk a handful of well-known workspace package.json paths to build a
 // `name -> Set<script-keys>` map. Kept deliberately lightweight and explicit
-// (no glob walking, no yaml parsing) so the script stays trivially auditable
-// and runnable without extra deps. Keep this list in sync with
-// pnpm-workspace.yaml when workspace layout changes.
 const WORKSPACE_PKG_DIRS = [
+  "packages/command",
+  "packages/logging",
+  "packages/time",
   "packages/sdk",
   "packages/round-bindings",
   "packages/tlock",
@@ -86,27 +72,35 @@ const WORKSPACE_PKG_DIRS = [
   "apps/web",
 ];
 
+function getPaths(root) {
+  return {
+    deployDoc: resolve(root, "docs/DEPLOY.md"),
+    rootEnv: resolve(root, ".env.example"),
+    webEnv: resolve(root, "apps/web/.env.example"),
+    rootPkg: resolve(root, "package.json"),
+  };
+}
+
 function loadEnvKeys(filePath) {
   const text = readFileSync(filePath, "utf8");
-  // Match either an active `NAME=…` line or a commented `# NAME=…` line.
   const re = /^[ \t]*(?:#[ \t]*)?([A-Z][A-Z0-9_]{2,})\s*=/gm;
   return new Set(Array.from(text.matchAll(re), (m) => m[1]));
 }
 
-function loadRootScripts() {
-  const pkg = JSON.parse(readFileSync(PATHS.rootPkg, "utf8"));
+function loadRootScripts(rootPkgPath) {
+  const pkg = JSON.parse(readFileSync(rootPkgPath, "utf8"));
   return new Set(Object.keys(pkg.scripts ?? {}));
 }
 
-function loadWorkspaceScripts() {
+function loadWorkspaceScripts(root) {
   const map = new Map();
   for (const dir of WORKSPACE_PKG_DIRS) {
-    const pkgPath = resolve(ROOT, dir, "package.json");
+    const pkgPath = resolve(root, dir, "package.json");
     let raw;
     try {
       raw = readFileSync(pkgPath, "utf8");
     } catch (err) {
-      if (err.code === "ENOENT") continue; // package not present -- fine
+      if (err.code === "ENOENT") continue;
       throw err;
     }
     const pkg = JSON.parse(raw);
@@ -119,42 +113,54 @@ function loadWorkspaceScripts() {
 
 function isLikelyEnvVar(name) {
   if (KNOWN_NON_ENVS.has(name)) return false;
-  // Skip pure-digit or 1-letter placeholders like `S…`, `C…`, `G…` which
-  // intentionally do not start with a letter; this is a defensive belt.
-  return /^[A-Z][A-Z0-9_]{2,}$/.test(name);
+  if (!/^[A-Z]/.test(name)) return false;
+  return true;
 }
 
 function findDocEnvVars(docText) {
-  const set = new Set();
-  for (const m of docText.matchAll(ENV_ASSIGN_RE)) set.add(m[1]);
-  for (const m of docText.matchAll(ENV_TABLE_RE)) set.add(m[1]);
-  return [...set].filter(isLikelyEnvVar).sort();
+  const found = new Set();
+  for (const match of docText.matchAll(ENV_ASSIGN_RE)) {
+    const name = match[1];
+    if (isLikelyEnvVar(name)) found.add(name);
+  }
+  for (const match of docText.matchAll(TABLE_ENV_RE)) {
+    const name = match[1];
+    if (isLikelyEnvVar(name)) found.add(name);
+  }
+  return Array.from(found).sort();
 }
 
 function findDocPnpmCommands(docText) {
   const out = [];
-  for (const m of docText.matchAll(PNPM_FILTER_RE)) {
-    const cmd = m[2];
+  for (const match of docText.matchAll(PNPM_CMD_RE)) {
+    const pkg = match[1];
+    const cmd = match[2];
     if (SKIP_PNPM.has(cmd)) continue;
-    out.push({ kind: "filter", pkg: m[1], cmd, spec: `pnpm --filter ${m[1]} ${cmd}` });
+    if (pkg) {
+      out.push({ kind: "filtered", pkg, cmd, spec: `pnpm --filter ${pkg} ${cmd}` });
+    } else {
+      out.push({ kind: "plain", cmd, spec: `pnpm ${cmd}` });
+    }
   }
-  for (const m of docText.matchAll(PNPM_PLAIN_RE)) {
-    const cmd = m[1];
-    if (SKIP_PNPM.has(cmd)) continue;
-    out.push({ kind: "plain", pkg: null, cmd, spec: `pnpm ${cmd}` });
-  }
-  // De-duplicate by `spec`.
   const seen = new Set();
   return out.filter((c) => (seen.has(c.spec) ? false : (seen.add(c.spec), true)));
 }
 
-function main() {
-  const docText = readFileSync(PATHS.deployDoc, "utf8");
+/**
+ * Validates deploy documentation references against environment templates and scripts.
+ *
+ * @param {string} [targetRoot]
+ * @returns {number}
+ */
+export function main(targetRoot) {
+  const root = process.env.DEPLOY_DOCS_ROOT || targetRoot || process.cwd();
+  const paths = getPaths(root);
+  const docText = readFileSync(paths.deployDoc, "utf8");
 
-  const rootAllowed = loadEnvKeys(PATHS.rootEnv);
-  const webAllowed = loadEnvKeys(PATHS.webEnv);
-  const rootScripts = loadRootScripts();
-  const wsScripts = loadWorkspaceScripts();
+  const rootAllowed = loadEnvKeys(paths.rootEnv);
+  const webAllowed = loadEnvKeys(paths.webEnv);
+  const rootScripts = loadRootScripts(paths.rootPkg);
+  const wsScripts = loadWorkspaceScripts(root);
 
   const envVars = findDocEnvVars(docText);
   const commands = findDocPnpmCommands(docText);
@@ -201,4 +207,10 @@ function main() {
   return 1;
 }
 
-process.exit(main());
+runCommand({
+  name: "scripts.check-deploy-docs",
+  description: "Check docs/DEPLOY.md references for consistency with .env.example files and package.json scripts",
+  run(ctx) {
+    return main(ctx.repoRoot);
+  },
+});
