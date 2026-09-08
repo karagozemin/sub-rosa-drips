@@ -121,8 +121,12 @@ function parseRpcUrl(
     if (url.protocol !== "https:" && url.protocol !== "http:") {
       throw new Error("unsupported protocol");
     }
+    if (url.username || url.password) {
+      throw new AppraisalConfigError("RPC_URL", "must not contain embedded credentials");
+    }
     return url.toString().replace(/\/$/, "");
   } catch (cause) {
+    if (cause instanceof AppraisalConfigError) throw cause;
     throw new AppraisalConfigError(
       "RPC_URL",
       `must be a valid http(s) URL, got ${JSON.stringify(value)}`,
