@@ -128,10 +128,11 @@ export function validateAssetConfig(
 
   const decimals = validateNumber(raw.decimals, "decimals");
   if (decimals !== undefined) {
-    if (decimals < 0 || decimals > MAX_TOKEN_DECIMALS) {
+    const maxDecimals = type === "native" ? MAX_STROOPS_DECIMALS : MAX_TOKEN_DECIMALS;
+    if (decimals < 0 || decimals > maxDecimals) {
       throw new AssetConfigError(
         "decimals",
-        `decimals must be 0-${MAX_TOKEN_DECIMALS}, got ${decimals}`,
+        `decimals must be 0-${maxDecimals}, got ${decimals}`,
       );
     }
     config.decimals = decimals;
