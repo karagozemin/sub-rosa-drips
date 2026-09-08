@@ -10,6 +10,10 @@ describe("normalizeRoundId", () => {
     assert.equal(normalizeRoundId("001"), 1n);
     assert.equal(normalizeRoundId(7), 7n);
     assert.equal(normalizeRoundId(7n), 7n);
+    assert.equal(normalizeRoundId(1), 1n);
+    assert.equal(normalizeRoundId(1n), 1n);
+    assert.equal(normalizeRoundId(Number.MAX_SAFE_INTEGER), BigInt(Number.MAX_SAFE_INTEGER));
+    assert.equal(normalizeRoundId(BigInt(Number.MAX_SAFE_INTEGER) + 100n), BigInt(Number.MAX_SAFE_INTEGER) + 100n);
   });
 
   it("rejects malformed values with explicit errors", () => {
@@ -17,8 +21,30 @@ describe("normalizeRoundId", () => {
     assert.throws(() => normalizeRoundId("   "), /roundId/);
     assert.throws(() => normalizeRoundId("0"), /positive integer/);
     assert.throws(() => normalizeRoundId("-1"), /positive integer/);
-    assert.throws(() => normalizeRoundId("1.5"), /roundId/);
-    assert.throws(() => normalizeRoundId("abc"), /roundId/);
+    assert.throws(() => normalizeRoundId("1.5"), /positive integer/);
+    assert.throws(() => normalizeRoundId("abc"), /positive integer/);
+    assert.throws(() => normalizeRoundId("0x10"), /positive integer/);
+    assert.throws(() => normalizeRoundId("+5"), /positive integer/);
+  });
+
+  it("rejects zero and negative number or bigint inputs", () => {
+    assert.throws(() => normalizeRoundId(0), /positive integer/);
+    assert.throws(() => normalizeRoundId(-1), /positive integer/);
+    assert.throws(() => normalizeRoundId(-42), /positive integer/);
+    assert.throws(() => normalizeRoundId(0n), /positive integer/);
+    assert.throws(() => normalizeRoundId(-1n), /positive integer/);
+    assert.throws(() => normalizeRoundId(-42n), /positive integer/);
+  });
+
+  it("rejects unsafe, fractional, and non-finite numbers", () => {
+    assert.throws(() => normalizeRoundId(1.5), /positive integer/);
+    assert.throws(() => normalizeRoundId(0.1), /positive integer/);
+    assert.throws(() => normalizeRoundId(NaN), /positive integer/);
+    assert.throws(() => normalizeRoundId(Infinity), /positive integer/);
+    assert.throws(() => normalizeRoundId(-Infinity), /positive integer/);
+    assert.throws(() => normalizeRoundId(Number.MAX_SAFE_INTEGER + 1), /positive integer/);
+    assert.throws(() => normalizeRoundId(Number.MAX_SAFE_INTEGER + 2), /positive integer/);
+    assert.throws(() => normalizeRoundId(Number.MIN_SAFE_INTEGER), /positive integer/);
   });
 });
 
