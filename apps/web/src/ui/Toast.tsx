@@ -102,7 +102,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               <button
                 type="button"
                 className="toast-close"
-                aria-label="Dismiss"
+                aria-label={`Dismiss: ${item.title}`}
                 onClick={() => dismiss(item.id)}
               >
                 ×
