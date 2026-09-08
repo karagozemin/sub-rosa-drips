@@ -216,7 +216,7 @@ test("rejects invalid base64 string (evidence ciphertext)", () => {
   );
   assert.equal(result.valid, false);
   assert.equal(result.issues[0].code, "invalid_encoding");
-  assert.match(result.issues[0].message, /not valid hex or base64/);
+  assert.match(result.issues[0].message, /not valid base64 encoding/);
 });
 
 test("accepts 0x-prefixed hex evidence ciphertext", () => {
@@ -329,4 +329,30 @@ test("custom maxBytes can be more permissive than default", () => {
     maxBytes: MAX_CIPHERTEXT_BYTES + 200,
   });
   assert.equal(result.valid, true);
+});
+
+test("forced hex does not fall back to base64", () => {
+  const result = validateEncryptedBlob("/w==", "ciphertext", { encoding: "hex" });
+  assert.equal(result.valid, false);
+  assert.equal(result.issues[0].code, "invalid_encoding");
+  assert.match(result.issues[0].message, /not valid hex encoding/);
+});
+test("forced base64 does not fall back to hex", () => {
+  const result = validateEncryptedBlob("ff", "ciphertext", { encoding: "base64" });
+  assert.equal(result.valid, false);
+  assert.equal(result.issues[0].code, "invalid_encoding");
+  assert.match(result.issues[0].message, /not valid base64 encoding/);
+});
+test("ambiguous text uses the requested decoder for the decoded size limit", () => {
+  assert.equal(validateEncryptedBlob("deadbeef", "ciphertext", { encoding: "hex", maxBytes: 4 }).valid, true);
+  const base64 = validateEncryptedBlob("deadbeef", "ciphertext", { encoding: "base64", maxBytes: 4 });
+  assert.equal(base64.valid, false);
+  assert.equal(base64.issues[0].code, "blob_too_large");
+  assert.equal(validateEncryptedBlob("deadbeef", "ciphertext", { maxBytes: 4 }).valid, true);
+});
+test("explicit decoders accept their valid input and auto-detection accepts both", () => {
+  for (const [blob, encoding] of [["0xff", "hex"], ["/w==", "base64"]] as const) {
+    assert.equal(validateEncryptedBlob(blob, "ciphertext", { encoding }).valid, true);
+    assert.equal(validateEncryptedBlob(blob, "ciphertext").valid, true);
+  }
 });

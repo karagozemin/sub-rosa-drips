@@ -219,7 +219,7 @@ export function validateEncryptedBlob(
       // Not valid hex or base64.
       add(
         "invalid_encoding",
-        `${HUMAN_LABELS[ct]} is not valid hex or base64 encoding (length=${blob.length})`,
+        `${HUMAN_LABELS[ct]} is not valid ${encoding ?? "hex or base64"} encoding (length=${blob.length})`,
       );
       return { valid: false, issues };
     }
