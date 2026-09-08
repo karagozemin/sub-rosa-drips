@@ -116,23 +116,28 @@ function parseRpcUrl(
     return DEFAULT_TESTNET_RPC_URL;
   }
 
+  let url: URL;
   try {
-    const url = new URL(value);
+    url = new URL(value);
     if (url.protocol !== "https:" && url.protocol !== "http:") {
       throw new Error("unsupported protocol");
     }
-    if (url.username || url.password) {
-      throw new AppraisalConfigError("RPC_URL", "must not contain embedded credentials");
-    }
-    return url.toString().replace(/\/$/, "");
   } catch (cause) {
-    if (cause instanceof AppraisalConfigError) throw cause;
     throw new AppraisalConfigError(
       "RPC_URL",
       `must be a valid http(s) URL, got ${JSON.stringify(value)}`,
       { cause },
     );
   }
+
+  if (url.username || url.password) {
+    throw new AppraisalConfigError(
+      "RPC_URL",
+      "must not contain credentials",
+    );
+  }
+
+  return url.toString().replace(/\/$/, "");
 }
 
 function validateFacilitatorSecret(secret: string): void {
