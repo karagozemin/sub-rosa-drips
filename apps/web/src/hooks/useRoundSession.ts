@@ -38,6 +38,7 @@ import { DEMO_TRACE } from "../demo/trace";
 import { formatCountdown, useDrandCountdown } from "./useDrandCountdown";
 import { useToast } from "../ui/Toast";
 import { useTime } from "../lib/time";
+import { shortAddr } from "../lib/format";
 
 export type ActionStatus = "idle" | "working" | "ok" | "error";
 
