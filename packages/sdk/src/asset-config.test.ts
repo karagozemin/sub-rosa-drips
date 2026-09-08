@@ -219,3 +219,27 @@ describe("AssetConfigError", () => {
     assert.equal(err.cause, cause);
   });
 });
+
+describe("asset-specific decimal limits", () => {
+  for (const [type, maximum] of [["native", 7], ["sac", 18]] as const) {
+    const base = type === "native" ? ASSET_FIXTURES.valid.native : ASSET_FIXTURES.valid.sac;
+    for (const decimals of [0, maximum]) {
+      it(`accepts ${type} decimals=${decimals}`, () => {
+        assert.equal(validateAssetConfig({ ...base, decimals }).decimals, decimals);
+      });
+    }
+    for (const decimals of [-1, maximum + 1]) {
+      it(`rejects ${type} decimals=${decimals}`, () => {
+        assert.throws(() => validateAssetConfig({ ...base, decimals }), (error: unknown) => {
+          assert.ok(error instanceof AssetConfigError);
+          assert.equal(error.field, "decimals");
+          assert.ok(error.message.includes(`0-${maximum}`));
+          return true;
+        });
+      });
+    }
+  }
+  it("retains SAC support above the native precision limit", () => {
+    assert.equal(validateAssetConfig({ ...ASSET_FIXTURES.valid.sac, decimals: 8 }).decimals, 8);
+  });
+});
