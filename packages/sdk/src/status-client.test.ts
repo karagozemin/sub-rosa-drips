@@ -30,6 +30,10 @@ function mockFetch(body: string, status = 200): typeof fetch {
 }
 
 describe("KeeperStatusClient successful JSON parsing", () => {
+  it("aborts a request after the configured timeout", async () => {
+    const client = new KeeperStatusClient({ baseURL: "http://keeper.test", timeoutMs: 1, fetchImpl: async (_url, init) => new Promise((_resolve, reject) => init?.signal?.addEventListener("abort", () => reject(init.signal?.reason))) });
+    await assert.rejects(() => client.getStatus(), /timed out/i);
+  });
   it("returns valid successful JSON unchanged", async () => {
     const client = new KeeperStatusClient({
       baseURL: "http://keeper.test",

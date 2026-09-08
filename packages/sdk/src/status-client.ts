@@ -15,6 +15,7 @@ export interface StatusClientOptions {
   baseURL: string;
   fetchImpl?: typeof fetch;
   headers?: Record<string, string>;
+  timeoutMs?: number;
 }
 
 export class StatusApiError extends Error {
@@ -71,11 +72,13 @@ export class KeeperStatusClient {
   readonly baseURL: string;
   readonly fetchImpl: typeof fetch;
   readonly headers: Record<string, string>;
+  readonly timeoutMs: number;
 
   constructor(opts: StatusClientOptions) {
     this.baseURL = opts.baseURL;
     this.fetchImpl = opts.fetchImpl ?? globalThis.fetch;
     this.headers = opts.headers ?? {};
+    this.timeoutMs = opts.timeoutMs ?? 10_000;
     if (!this.fetchImpl) {
       throw new Error(
         "No global fetch found. Pass `fetchImpl` in StatusClientOptions.",
@@ -83,33 +86,39 @@ export class KeeperStatusClient {
     }
   }
 
-  async getStatus(): Promise<KeeperStatusResponse> {
-    return this.getJSON<KeeperStatusResponse>("/status");
+  async getStatus(signal?: AbortSignal): Promise<KeeperStatusResponse> {
+    return this.getJSON<KeeperStatusResponse>("/status", signal);
   }
 
-  async getRound(roundId: number | bigint | string): Promise<KeeperRoundStatusView> {
-    return this.getJSON<KeeperRoundStatusView>(`/status/rounds/${roundId}`);
+  async getRound(roundId: number | bigint | string, signal?: AbortSignal): Promise<KeeperRoundStatusView> {
+    return this.getJSON<KeeperRoundStatusView>(`/status/rounds/${roundId}`, signal);
   }
 
-  async getHealth(): Promise<KeeperHealthResponse> {
-    return this.getJSON<KeeperHealthResponse>("/status/health");
+  async getHealth(signal?: AbortSignal): Promise<KeeperHealthResponse> {
+    return this.getJSON<KeeperHealthResponse>("/status/health", signal);
   }
 
-  async healthz(): Promise<{ ok: boolean; [k: string]: unknown }> {
-    return this.getJSON<{ ok: boolean; [k: string]: unknown }>("/healthz");
+  async healthz(signal?: AbortSignal): Promise<{ ok: boolean; [k: string]: unknown }> {
+    return this.getJSON<{ ok: boolean; [k: string]: unknown }>("/healthz", signal);
   }
 
-  async getJSON<T>(path: string): Promise<T> {
+  async getJSON<T>(path: string, callerSignal?: AbortSignal): Promise<T> {
     const url = fullURL(this.baseURL, path);
-    const res = await this.fetchImpl(url, {
-      method: "GET",
-      headers: { Accept: "application/json", ...this.headers },
-    });
-    if (!res.ok) {
-      const body = await parseErrorBody(res);
-      throw new StatusApiError(res.status, body);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(new Error("keeper status request timed out")), this.timeoutMs);
+    const forwardAbort = () => controller.abort(callerSignal?.reason);
+    callerSignal?.addEventListener("abort", forwardAbort, { once: true });
+    try {
+      const res = await this.fetchImpl(url, { method: "GET", headers: { Accept: "application/json", ...this.headers }, signal: controller.signal });
+      if (!res.ok) {
+        const body = await parseErrorBody(res);
+        throw new StatusApiError(res.status, body);
+      }
+      return parseSuccessBody<T>(res);
+    } finally {
+      clearTimeout(timer);
+      callerSignal?.removeEventListener("abort", forwardAbort);
     }
-    return parseSuccessBody<T>(res);
   }
 }
 
