@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Sub Rosa contributors
 /**
  * Smoke test for the sealed-auction template (fixture / offline mode).
  *

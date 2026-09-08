@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Sub Rosa contributors
 // queue-replay.test.ts
 //
 // Fixture-driven replay test for the keeper queue.  Exercises the queue

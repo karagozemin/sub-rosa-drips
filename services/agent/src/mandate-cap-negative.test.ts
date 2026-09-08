@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Sub Rosa contributors
 /**
  * Negative cap-safety scenarios — documented for jury demo + UI cap lab parity.
  * These prove agent-side refusal/clamp; on-chain escrow is a separate ceiling.
