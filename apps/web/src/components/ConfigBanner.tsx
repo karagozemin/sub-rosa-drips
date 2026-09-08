@@ -10,8 +10,12 @@ export function ConfigBanner() {
 
   useEffect(() => {
     setIssues(validatePublicConfig());
-    const stored = globalThis.sessionStorage?.getItem(BANNER_STORAGE_KEY);
-    if (stored === "1") setDismissed(true);
+    try {
+      const stored = globalThis.sessionStorage?.getItem(BANNER_STORAGE_KEY);
+      if (stored === "1") setDismissed(true);
+    } catch {
+      // Keep the banner usable when browser storage is blocked.
+    }
   }, []);
 
   if (issues.length === 0 || dismissed) return null;
@@ -35,7 +39,11 @@ export function ConfigBanner() {
         aria-label="Dismiss"
         onClick={() => {
           setDismissed(true);
-          globalThis.sessionStorage?.setItem(BANNER_STORAGE_KEY, "1");
+          try {
+            globalThis.sessionStorage?.setItem(BANNER_STORAGE_KEY, "1");
+          } catch {
+            // Dismissal still applies to the current mounted banner.
+          }
         }}
       >
         &times;
