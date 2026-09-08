@@ -36,3 +36,18 @@ describe("normalizeSorobanContractId", () => {
     assert.throws(() => normalizeSorobanContractId("C123"), /contractId/);
   });
 });
+
+describe("normalizeRoundId numeric boundaries", () => {
+  for (const value of [0, -0, -1, 1.5, NaN, Infinity, -Infinity, Number.MAX_SAFE_INTEGER + 1, 0n, -1n]) {
+    it(`rejects ${String(value)} (${typeof value})`, () => {
+      assert.throws(() => normalizeRoundId(value), /roundId must be a positive/);
+    });
+  }
+  it("preserves safe numbers and arbitrary-precision positive bigint/string IDs", () => {
+    assert.equal(normalizeRoundId(1), 1n);
+    assert.equal(normalizeRoundId(Number.MAX_SAFE_INTEGER), BigInt(Number.MAX_SAFE_INTEGER));
+    const large = 2n ** 100n;
+    assert.equal(normalizeRoundId(large), large);
+    assert.equal(normalizeRoundId(large.toString()), large);
+  });
+});
