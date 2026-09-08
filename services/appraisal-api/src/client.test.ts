@@ -3,7 +3,7 @@ import { x402HTTPClient } from "@x402/core/client";
 import { Keypair } from "@stellar/stellar-sdk";
 import { describe, test } from "node:test";
 
-import { createPaidFetch, X402PaymentError, AppraisalResponseParseError } from "./client.js";
+import { createPaidFetch, X402PaymentError, AppraisalResponseParseError, MAX_PAYMENT_ERROR_DIAGNOSTIC_LENGTH, sanitizePaymentErrorDiagnostic } from "./client.js";
 
 const TEST_SECRET = Keypair.random().secret();
 const VALID_402_BODY = {
@@ -33,6 +33,11 @@ function buildResponse(status: number, body: string | undefined, headers?: Recor
 }
 
 describe("createPaidFetch response parsing", () => {
+  test("bounds diagnostics and redacts credential fields", () => {
+    const diagnostic = sanitizePaymentErrorDiagnostic(JSON.stringify({ token: "secret", detail: "x".repeat(1000) }));
+    assert.ok(diagnostic.length <= MAX_PAYMENT_ERROR_DIAGNOSTIC_LENGTH);
+    assert.doesNotMatch(diagnostic, /secret/);
+  });
   test("throws a typed parse error for an unpaid empty response body", async () => {
     const paidFetch = createPaidFetch({ secret: TEST_SECRET });
     const originalFetch = globalThis.fetch;

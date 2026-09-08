@@ -28,6 +28,14 @@ export interface PaidResult<T = unknown> {
   settlement?: SettleResponse;
 }
 
+export const MAX_PAYMENT_ERROR_DIAGNOSTIC_LENGTH = 512;
+const SENSITIVE_FIELD = /("?(?:secret|token|password|authorization|privateKey|private_key|apiKey|api_key)"?\s*:\s*)"?[^,}\s]+/gi;
+
+/** Bound provider diagnostics and redact common credential fields before display/logging. */
+export function sanitizePaymentErrorDiagnostic(body: string): string {
+  return body.slice(0, MAX_PAYMENT_ERROR_DIAGNOSTIC_LENGTH).replace(SENSITIVE_FIELD, '$1[REDACTED]');
+}
+
 export class AppraisalResponseParseError extends Error {
   readonly name = "AppraisalResponseParseError";
   readonly status: number;
