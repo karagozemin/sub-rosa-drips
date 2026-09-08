@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import { StrKey } from "@stellar/stellar-sdk";
 
 export class AssetConfigError extends Error {

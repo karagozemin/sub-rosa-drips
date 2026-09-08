@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 // sealBid / openBid — the off-chain seal.
 //
 // sealBid timelock-encrypts the exact commitment preimage (be16(value)‖nonce) to

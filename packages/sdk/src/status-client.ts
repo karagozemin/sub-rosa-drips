@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 // Fetch helpers for the keeper status API. These are intentionally tiny
 // wrappers over `fetch` so they work unchanged in Node 22+, the browser, or a
 // Lambda — no `axios`, no generated client. Status endpoints are read-only

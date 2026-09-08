@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 /** Frozen mainnet deployment artifacts — read-only proof references. */
 export const MAINNET_ARTIFACTS = {
   network: "Stellar Mainnet",

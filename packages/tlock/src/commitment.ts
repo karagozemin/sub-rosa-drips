@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 // Commitment byte encoding — byte-for-byte identical to the Round contract.
 //
 // The contract computes H = sha256(value.to_be_bytes() ‖ nonce.to_array()),

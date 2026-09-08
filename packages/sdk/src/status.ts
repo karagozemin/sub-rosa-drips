@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 // Typed response shapes for the keeper status API. These mirror the stable
 // JSON the status HTTP server emits, so client code (dashboards, monitoring
 // probes, an operator's CLI helpers) can consume `GET /status`,

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 import type { RoundReceipt, BidReceiptEntry } from "./receipt.js";
 
 export type { BidReceiptEntry } from "./receipt.js";

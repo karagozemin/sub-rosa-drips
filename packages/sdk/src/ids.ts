@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 const SOROBAN_CONTRACT_ID_RE = /^C[A-Z2-7]{55}$/;
 
 function toTrimmedString(value: string | undefined): string | undefined {
