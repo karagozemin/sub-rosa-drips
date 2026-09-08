@@ -81,6 +81,14 @@
     "receipt:typecheck": "pnpm --filter @sub-rosa/receipt-cli typecheck",
     "time:test": "pnpm --filter @sub-rosa/time test",
     "time:guard": "node scripts/check-direct-time-access.mjs",
-    "time:guard:test": "node --test scripts/check-direct-time-access.test.mjs"
+    "time:guard:test": "node --test scripts/check-direct-time-access.test.mjs",
+    "command:test": "pnpm --filter @sub-rosa/command test",
+    "command:typecheck": "pnpm --filter @sub-rosa/command typecheck",
+    "command-runner:check": "node scripts/check-command-runner.mjs",
+    "command-runner:test": "node --test scripts/check-command-runner.test.mjs"
+  },
+  "devDependencies": {
+    "@sub-rosa/command": "workspace:*",
+    "@sub-rosa/logging": "workspace:*"
   }
 }

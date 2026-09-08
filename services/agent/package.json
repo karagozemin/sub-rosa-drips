@@ -21,6 +21,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@sub-rosa/command": "workspace:*",
     "@sub-rosa/logging": "workspace:*",
     "@stellar/stellar-sdk": "^15.1.0",
     "@sub-rosa/appraisal-api": "workspace:*",

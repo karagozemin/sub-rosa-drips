@@ -1,4 +1,5 @@
 import { createLogger } from '@sub-rosa/logging';
+import { runCommand } from "@sub-rosa/command";
 const diagnostics = createLogger("packages.sdk.scripts.live-smoke");
 // Live smoke gate — proves the SDK's sign → submit → poll → read path actually
 // works against a real Soroban network, end to end, with no mock and no
@@ -50,140 +51,135 @@ const NETWORK =
 const hex = (s: string) => Buffer.from(s, "hex");
 const sha256 = (s: string) => createHash("sha256").update(s).digest();
 
-async function main() {
-  const operatorSecret = reqEnv("OPERATOR_SECRET");
-  const bidderSecret = reqEnv("BIDDER_SECRET");
-  const wasmHash = reqEnv("WASM_HASH");
-  const usdc = reqEnv("USDC_SAC"); // native XLM SAC id for the smoke run
+runCommand({
+  name: "sdk.live-smoke",
+  description: "Live smoke gate verifying end-to-end Soroban contract interaction",
+  async run(ctx) {
+    const operatorSecret = reqEnv("OPERATOR_SECRET");
+    const bidderSecret = reqEnv("BIDDER_SECRET");
+    const wasmHash = reqEnv("WASM_HASH");
+    const usdc = reqEnv("USDC_SAC");
 
-  const operatorKp = Keypair.fromSecret(operatorSecret);
-  const bidderKp = Keypair.fromSecret(bidderSecret);
-  const operatorSigner = basicNodeSigner(operatorKp, NETWORK);
+    const rpcUrl = ctx.env.RPC_URL ?? "https://soroban-testnet.stellar.org";
+    const network = ctx.env.NETWORK_PASSPHRASE ?? "Test SDF Network ; September 2015";
 
-  diagnostics.info("operator", "· operator:", { "value1_0": operatorKp.publicKey() });
-  diagnostics.info("bidder", "· bidder:  ", { "value1_0": bidderKp.publicKey() });
-  diagnostics.info("token", "· token:   ", { "usdc_0": usdc, "value2_1": "(native XLM SAC)" });
+    const operatorKp = Keypair.fromSecret(operatorSecret);
+    const bidderKp = Keypair.fromSecret(bidderSecret);
+    const operatorSigner = basicNodeSigner(operatorKp, network);
 
-  // ── 1. Deploy a fresh Round (constructor over live RPC) ────────────────
-  diagnostics.info("1-5-deploying-round-running-constructor", "\n[1/5] deploying Round + running __constructor…");
-  const deployTx = await RoundContract.deploy(
-    {
-      drand_pubkey: hex(DRAND_PUBKEY_C1C0),
-      g2_neg_generator: hex(DRAND_NEGGEN_C1C0),
-      dst: Buffer.from(DST, "utf8"),
-      drand_genesis: DRAND_GENESIS,
-      drand_period: DRAND_PERIOD,
-      usdc,
-    },
-    {
-      wasmHash,
-      rpcUrl: RPC_URL,
-      networkPassphrase: NETWORK,
+    diagnostics.info("operator", "· operator:", { "value1_0": operatorKp.publicKey() });
+    diagnostics.info("bidder", "· bidder:  ", { "value1_0": bidderKp.publicKey() });
+    diagnostics.info("token", "· token:   ", { "usdc_0": usdc, "value2_1": "(native XLM SAC)" });
+
+    diagnostics.info("1-5-deploying-round-running-constructor", "\n[1/5] deploying Round + running __constructor…");
+    const deployTx = await RoundContract.deploy(
+      {
+        drand_pubkey: hex(DRAND_PUBKEY_C1C0),
+        g2_neg_generator: hex(DRAND_NEGGEN_C1C0),
+        dst: Buffer.from(DST, "utf8"),
+        drand_genesis: DRAND_GENESIS,
+        drand_period: DRAND_PERIOD,
+        usdc,
+      },
+      {
+        wasmHash,
+        rpcUrl,
+        networkPassphrase: network,
+        publicKey: operatorKp.publicKey(),
+        signTransaction: operatorSigner.signTransaction,
+      },
+    );
+    const deployed = await deployTx.signAndSend();
+    const contractId = deployed.result.options.contractId;
+    diagnostics.info("deployed", "    ✔ deployed:", { "contractId_0": contractId });
+
+    const operator = new SubRosaClient({
+      rpcUrl,
+      networkPassphrase: network,
+      contractId,
+      secretKey: operatorSecret,
+    });
+
+    const now = systemClock.nowSeconds();
+    const tReveal = now + 300;
+    const revealRound = Math.ceil((tReveal - Number(DRAND_GENESIS)) / Number(DRAND_PERIOD));
+    const tRevealExact = Number(DRAND_GENESIS) + Number(DRAND_PERIOD) * revealRound;
+    const commitDeadline = now + 90;
+    const revealDeadline = tRevealExact + 300;
+
+    const auditor = generateAuditorKeypair();
+
+    diagnostics.info("2-5-createround", "\n[2/5] createRound…", { "value1_0": { revealRound, commitDeadline, revealDeadline } });
+    const roundId = await operator.createRound({
+      itemRef: sha256("sub-rosa://smoke/item-1"),
+      revealRound,
+      commitDeadline,
+      revealDeadline,
+      auditorPubkey: auditor.publicKey,
+      clearingRule: "HighestBid",
+    });
+    diagnostics.info("round-id", "    ✔ round id:", { "value1_0": roundId.toString() });
+
+    diagnostics.info("3-5-sealing-bid-to-quicknet-round-r-commit", "\n[3/5] sealing bid to quicknet round R + commit…");
+    const drand = await quicknet();
+    const value = 10_000_000n;
+    const escrow = 50_000_000n;
+    const nonce = generateNonce();
+    const identity = new TextEncoder().encode("bidder:smoke@sub-rosa");
+    const sealed = await sealBid({
+      value,
+      nonce,
+      round: revealRound,
+      client: drand,
+      identity,
+      auditorPublicKey: auditor.publicKey,
+    });
+
+    const bidder = new SubRosaClient({
+      rpcUrl,
+      networkPassphrase: network,
+      contractId,
+      secretKey: bidderSecret,
+    });
+    await bidder.commit({ roundId, sealed, escrow });
+    diagnostics.info("committed-escrow-locked", "    ✔ committed, escrow locked:", { "value1_0": escrow.toString(), "value2_1": "stroops" });
+
+    diagnostics.info("4-5-reading-state-back-over-rpc", "\n[4/5] reading state back over RPC…");
+    const reader = new SubRosaClient({
+      rpcUrl,
+      networkPassphrase: network,
+      contractId,
       publicKey: operatorKp.publicKey(),
-      signTransaction: operatorSigner.signTransaction,
-    },
-  );
-  const deployed = await deployTx.signAndSend();
-  const contractId = deployed.result.options.contractId;
-  diagnostics.info("deployed", "    ✔ deployed:", { "contractId_0": contractId });
+    });
+    const round = await reader.getRound(roundId);
+    const bidders = await reader.getBidders(roundId);
+    const bidState = await reader.getBidState(roundId, bidderKp.publicKey());
+    const seal = await reader.getSeal(roundId, bidderKp.publicKey());
 
-  // ── 2. createRound via the SDK (operator signs) ────────────────────────
-  const operator = new SubRosaClient({
-    rpcUrl: RPC_URL,
-    networkPassphrase: NETWORK,
-    contractId,
-    secretKey: operatorSecret,
-  });
+    diagnostics.info("5-5-verifying", "\n[5/5] verifying…");
+    const fail = (m: string): never => {
+      throw new Error(`smoke assertion failed: ${m}`);
+    };
+    if (round.status.tag !== "Open") fail(`status ${round.status.tag} != Open`);
+    if (bidders.length !== 1) fail(`bidders ${bidders.length} != 1`);
+    if (bidders[0] !== bidderKp.publicKey()) fail("bidder index mismatch");
+    if (bidState.escrow !== escrow) fail(`escrow ${bidState.escrow} != ${escrow}`);
+    if (bidState.valid !== false) fail("bid valid before reveal");
+    if (!seal) throw new Error("smoke assertion failed: seal not found");
+    if (seal.ciphertext.length !== sealed.ciphertext.length) {
+      fail(`ciphertext len ${seal.ciphertext.length} != ${sealed.ciphertext.length}`);
+    }
+    if (Buffer.compare(Buffer.from(bidState.commitment), Buffer.from(sealed.commitment)) !== 0) {
+      fail("on-chain commitment != off-chain H");
+    }
+    if (seal.auditor_blob.length !== sealed.auditorBlob.length) {
+      fail("auditor blob length mismatch");
+    }
 
-  const now = systemClock.nowSeconds();
-  // Pick R so time(R) = genesis + period·R lands ~5 min in the future, then
-  // bracket it: now < commit_deadline < time(R) < reveal_deadline.
-  const tReveal = now + 300;
-  const revealRound = Math.ceil((tReveal - Number(DRAND_GENESIS)) / Number(DRAND_PERIOD));
-  const tRevealExact = Number(DRAND_GENESIS) + Number(DRAND_PERIOD) * revealRound;
-  const commitDeadline = now + 90;
-  const revealDeadline = tRevealExact + 300;
-
-  const auditor = generateAuditorKeypair();
-
-  diagnostics.info("2-5-createround", "\n[2/5] createRound…", { "value1_0": { revealRound, commitDeadline, revealDeadline } });
-  const roundId = await operator.createRound({
-    itemRef: sha256("sub-rosa://smoke/item-1"),
-    revealRound,
-    commitDeadline,
-    revealDeadline,
-    auditorPubkey: auditor.publicKey,
-    clearingRule: "HighestBid",
-  });
-  diagnostics.info("round-id", "    ✔ round id:", { "value1_0": roundId.toString() });
-
-  // ── 3. Seal a real bid to round R and commit (bidder signs) ────────────
-  diagnostics.info("3-5-sealing-bid-to-quicknet-round-r-commit", "\n[3/5] sealing bid to quicknet round R + commit…");
-  const drand = await quicknet();
-  const value = 10_000_000n; // 1 XLM (stroops) bid
-  const escrow = 50_000_000n; // 5 XLM budget locked
-  const nonce = generateNonce();
-  const identity = new TextEncoder().encode("bidder:smoke@sub-rosa");
-  const sealed = await sealBid({
-    value,
-    nonce,
-    round: revealRound,
-    client: drand,
-    identity,
-    auditorPublicKey: auditor.publicKey,
-  });
-
-  const bidder = new SubRosaClient({
-    rpcUrl: RPC_URL,
-    networkPassphrase: NETWORK,
-    contractId,
-    secretKey: bidderSecret,
-  });
-  await bidder.commit({ roundId, sealed, escrow });
-  diagnostics.info("committed-escrow-locked", "    ✔ committed, escrow locked:", { "value1_0": escrow.toString(), "value2_1": "stroops" });
-
-  // ── 4. Read everything back (read-only simulation) ─────────────────────
-  diagnostics.info("4-5-reading-state-back-over-rpc", "\n[4/5] reading state back over RPC…");
-  const reader = new SubRosaClient({
-    rpcUrl: RPC_URL,
-    networkPassphrase: NETWORK,
-    contractId,
-    publicKey: operatorKp.publicKey(),
-  });
-  const round = await reader.getRound(roundId);
-  const bidders = await reader.getBidders(roundId);
-  const bidState = await reader.getBidState(roundId, bidderKp.publicKey());
-  const seal = await reader.getSeal(roundId, bidderKp.publicKey());
-
-  // ── 5. Assert the round-trip is exactly what we wrote ──────────────────
-  diagnostics.info("5-5-verifying", "\n[5/5] verifying…");
-  const fail = (m: string): never => {
-    throw new Error(`smoke assertion failed: ${m}`);
-  };
-  if (round.status.tag !== "Open") fail(`status ${round.status.tag} != Open`);
-  if (bidders.length !== 1) fail(`bidders ${bidders.length} != 1`);
-  if (bidders[0] !== bidderKp.publicKey()) fail("bidder index mismatch");
-  if (bidState.escrow !== escrow) fail(`escrow ${bidState.escrow} != ${escrow}`);
-  if (bidState.valid !== false) fail("bid valid before reveal");
-  if (!seal) throw new Error("smoke assertion failed: seal not found");
-  if (seal.ciphertext.length !== sealed.ciphertext.length) {
-    fail(`ciphertext len ${seal.ciphertext.length} != ${sealed.ciphertext.length}`);
-  }
-  if (Buffer.compare(Buffer.from(bidState.commitment), Buffer.from(sealed.commitment)) !== 0) {
-    fail("on-chain commitment != off-chain H");
-  }
-  if (seal.auditor_blob.length !== sealed.auditorBlob.length) {
-    fail("auditor blob length mismatch");
-  }
-
-  diagnostics.info("status-open-1-bidder-escrow-locked-commitment-matches-h", "    ✔ status Open, 1 bidder, escrow locked, commitment matches H");
-  diagnostics.info("on-chain-ciphertext-auditor-blob-match-the-off-chain-se", "    ✔ on-chain ciphertext + auditor blob match the off-chain seal");
-  diagnostics.info("live-smoke-passed-sign-submit-poll-read-all-work-on-tes", "\n✅ LIVE SMOKE PASSED — sign/submit/poll/read all work on testnet.");
-  diagnostics.info("contract", "   contract:", { "contractId_0": contractId, "value2_1": "round:", "value3_2": roundId.toString() });
-}
-
-main().catch((err) => {
-  diagnostics.error("live-smoke-failed", "\n❌ LIVE SMOKE FAILED");
-  diagnostics.error("progress", err);
-  process.exit(1);
+    diagnostics.info("status-open-1-bidder-escrow-locked-commitment-matches-h", "    ✔ status Open, 1 bidder, escrow locked, commitment matches H");
+    diagnostics.info("on-chain-ciphertext-auditor-blob-match-the-off-chain-se", "    ✔ on-chain ciphertext + auditor blob match the off-chain seal");
+    diagnostics.info("live-smoke-passed-sign-submit-poll-read-all-work-on-tes", "\n✅ LIVE SMOKE PASSED — sign/submit/poll/read all work on testnet.");
+    diagnostics.info("contract", "   contract:", { "contractId_0": contractId, "value2_1": "round:", "value3_2": roundId.toString() });
+    return 0;
+  },
 });

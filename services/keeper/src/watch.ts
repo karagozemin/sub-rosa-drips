@@ -17,67 +17,64 @@ const diagnostics = createLogger("services.keeper.src.watch");
 import { Keypair } from "@stellar/stellar-sdk";
 import { SubRosaClient } from "@sub-rosa/sdk";
 import { quicknet } from "@sub-rosa/tlock";
+import { runCommand, ConfigError } from "@sub-rosa/command";
 
 import { createSettlementGuard } from "./settlement-guard.js";
 import { KeeperStore } from "./store.js";
 import { runWatchLoop } from "./watch-loop.js";
 
-function reqEnv(name: string): string {
-  const v = process.env[name];
-  if (!v) throw new Error(`missing required env var ${name}`);
+function reqEnv(ctxEnv: Record<string, string | undefined>, name: string): string {
+  const v = ctxEnv[name];
+  if (!v) throw new ConfigError(`missing required env var ${name}`);
   return v;
 }
 
-async function main() {
-  const pollMs = Number(process.env.WATCH_POLL_MS ?? "15000");
-  const contractId = reqEnv("ROUND_CONTRACT_ID");
-  const rpcUrl = process.env.RPC_URL ?? "https://soroban-testnet.stellar.org";
-  const networkPassphrase =
-    process.env.NETWORK_PASSPHRASE ?? "Test SDF Network ; September 2015";
-  const keeperSecret = reqEnv("KEEPER_SECRET");
+runCommand({
+  name: "services.keeper.watch",
+  description: "Watch-mode keeper daemon",
+  async run(ctx) {
+    const pollMs = Number(ctx.env.WATCH_POLL_MS ?? "15000");
+    const contractId = reqEnv(ctx.env, "ROUND_CONTRACT_ID");
+    const rpcUrl = ctx.env.RPC_URL ?? "https://soroban-testnet.stellar.org";
+    const networkPassphrase =
+      ctx.env.NETWORK_PASSPHRASE ?? "Test SDF Network ; September 2015";
+    const keeperSecret = reqEnv(ctx.env, "KEEPER_SECRET");
 
-  const sdk = new SubRosaClient({
-    rpcUrl,
-    networkPassphrase,
-    contractId,
-    secretKey: keeperSecret,
-  });
-  const drand = quicknet();
-  const log = (m: string) => diagnostics.info("progress", `· ${m}`);
+    const sdk = new SubRosaClient({
+      rpcUrl,
+      networkPassphrase,
+      contractId,
+      secretKey: keeperSecret,
+    });
+    const drand = quicknet();
+    const log = (m: string) => diagnostics.info("progress", `· ${m}`);
 
-  let stopping = false;
-  process.on("SIGINT", () => {
-    diagnostics.info("watch-sigint-finishing-current-tick-then-exit", "\nwatch: SIGINT — finishing current tick then exit");
-    stopping = true;
-  });
-  process.on("SIGTERM", () => {
-    stopping = true;
-  });
+    let stopping = false;
+    ctx.signal.addEventListener("abort", () => {
+      stopping = true;
+    });
 
-  const store = new KeeperStore();
-  const settlementGuard = createSettlementGuard();
+    const store = new KeeperStore();
+    const settlementGuard = createSettlementGuard();
 
-  diagnostics.info("sub-rosa-watch-mode-keeper", "Sub Rosa watch-mode keeper");
-  diagnostics.info("contract", "· contract:", { "contractId_0": contractId });
-  diagnostics.info("poll", "· poll:    ", { "pollMs_0": pollMs, "value2_1": "ms" });
-  diagnostics.info("ctrl-c-to-stop", "· Ctrl+C to stop\n");
+    diagnostics.info("sub-rosa-watch-mode-keeper", "Sub Rosa watch-mode keeper");
+    diagnostics.info("contract", "· contract:", { "contractId_0": contractId });
+    diagnostics.info("poll", "· poll:    ", { "pollMs_0": pollMs, "value2_1": "ms" });
+    diagnostics.info("ctrl-c-to-stop", "· Ctrl+C to stop\n");
 
-  await runWatchLoop({
-    sdk,
-    drand,
-    log,
-    pollMs,
-    contractId,
-    network: networkPassphrase,
-    store,
-    settlementGuard,
-    isStopping: () => stopping,
-  });
+    await runWatchLoop({
+      sdk,
+      drand,
+      log,
+      pollMs,
+      contractId,
+      network: networkPassphrase,
+      store,
+      settlementGuard,
+      isStopping: () => stopping || ctx.signal.aborted,
+    });
 
-  diagnostics.info("watch-stopped", "watch: stopped");
-}
-
-main().catch((err) => {
-  diagnostics.error("watch-keeper-failed", "watch keeper failed:", { "err_0": err });
-  process.exit(1);
+    diagnostics.info("watch-stopped", "watch: stopped");
+    return 0;
+  },
 });

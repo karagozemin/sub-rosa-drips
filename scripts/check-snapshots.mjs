@@ -19,14 +19,8 @@ const diagnostics = createLogger("scripts.check-snapshots");
 //   1  one or more categories missing
 
 import { readdirSync } from "node:fs";
-import { resolve, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const SNAPSHOT_DIR = resolve(
-  __dirname,
-  "../contracts/round/test_snapshots/test",
-);
+import { resolve } from "node:path";
+import { runCommand } from "@sub-rosa/command";
 
 // ---------------------------------------------------------------------------
 // Required snapshot categories.
@@ -103,44 +97,56 @@ const REQUIRED_CATEGORIES = [
   "seeded_case_7_lowest_bid_reproducible",
 ];
 
-// ---------------------------------------------------------------------------
-// Check
-// ---------------------------------------------------------------------------
+/**
+ * Validates the presence of required contract snapshot categories.
+ *
+ * @param {string} snapshotDir
+ * @returns {number}
+ */
+export function main(snapshotDir) {
+  let files;
+  try {
+    files = readdirSync(snapshotDir).filter((f) => f.endsWith(".json"));
+  } catch (err) {
+    diagnostics.error("cannot-read-snapshot-directory", `\n✗ Cannot read snapshot directory: ${snapshotDir}`);
+    diagnostics.error("progress", `  ${err.message}`);
+    return 1;
+  }
 
-let files;
-try {
-  files = readdirSync(SNAPSHOT_DIR).filter((f) => f.endsWith(".json"));
-} catch (err) {
-  diagnostics.error("cannot-read-snapshot-directory", `\n✗ Cannot read snapshot directory: ${SNAPSHOT_DIR}`);
-  diagnostics.error("progress", `  ${err.message}`);
-  process.exit(1);
-}
+  const presentCategories = new Set(
+    files.map((f) => f.replace(/\.\d+\.json$/, "")),
+  );
 
-// Strip the trailing  .<n>.json  suffix to get the bare category name.
-const presentCategories = new Set(
-  files.map((f) => f.replace(/\.\d+\.json$/, "")),
-);
+  const missing = REQUIRED_CATEGORIES.filter(
+    (cat) => !presentCategories.has(cat),
+  );
 
-const missing = REQUIRED_CATEGORIES.filter(
-  (cat) => !presentCategories.has(cat),
-);
+  const total = files.length;
+  const required = REQUIRED_CATEGORIES.length;
 
-const total = files.length;
-const required = REQUIRED_CATEGORIES.length;
+  diagnostics.info("contract-snapshot-inventory", `\nContract snapshot inventory`);
+  diagnostics.info("directory", `  Directory : ${snapshotDir}`);
+  diagnostics.info("files-found", `  Files found  : ${total}`);
+  diagnostics.info("categories-checked", `  Categories checked : ${required}`);
 
-diagnostics.info("contract-snapshot-inventory", `\nContract snapshot inventory`);
-diagnostics.info("directory", `  Directory : ${SNAPSHOT_DIR}`);
-diagnostics.info("files-found", `  Files found  : ${total}`);
-diagnostics.info("categories-checked", `  Categories checked : ${required}`);
+  if (missing.length === 0) {
+    diagnostics.info("all", `\n✓ All ${required} required snapshot categories are present.\n`);
+    return 0;
+  }
 
-if (missing.length === 0) {
-  diagnostics.info("all", `\n✓ All ${required} required snapshot categories are present.\n`);
-  process.exit(0);
-} else {
   diagnostics.error("progress-2", `\n✗ ${missing.length} required snapshot category/categories missing:\n`);
   for (const cat of missing) {
     diagnostics.error("progress-3", `    - ${cat}`);
   }
   diagnostics.error("regenerate-snapshots-with-cargo-test-p-sub-rosa-round", `\n  Regenerate snapshots with: cargo test -p sub-rosa-round\n`);
-  process.exit(1);
+  return 1;
 }
+
+runCommand({
+  name: "scripts.check-snapshots",
+  description: "Verify contract snapshot inventory",
+  run(ctx) {
+    const snapshotDir = ctx.resolvePath("contracts/round/test_snapshots/test");
+    return main(snapshotDir);
+  },
+});

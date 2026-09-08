@@ -1,0 +1,49 @@
+{
+  "name": "@sub-rosa/command",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Standardized command runner with preflight, signal lifecycle, cleanup registration, and exit codes.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Sub-Rosa-Issue/sub-rosa-issue.git",
+    "directory": "packages/command"
+  },
+  "main": "src/index.js",
+  "types": "src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "default": "./src/index.js"
+    },
+    "./errors": {
+      "types": "./src/errors.d.ts",
+      "default": "./src/errors.js"
+    },
+    "./types": {
+      "types": "./src/types.d.ts",
+      "default": "./src/types.js"
+    },
+    "./runner": {
+      "types": "./src/runner.d.ts",
+      "default": "./src/runner.js"
+    },
+    "./repo-root": {
+      "types": "./src/repo-root.d.ts",
+      "default": "./src/repo-root.js"
+    }
+  },
+  "scripts": {
+    "test": "node --import tsx --test test/runner.test.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@sub-rosa/logging": "workspace:*",
+    "@sub-rosa/time": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3"
+  }
+}

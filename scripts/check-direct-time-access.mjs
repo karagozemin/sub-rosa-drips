@@ -9,6 +9,7 @@ const diagnostics = createLogger("scripts.check-direct-time-access");
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { pathToFileURL } from "node:url";
+import { runCommand } from "@sub-rosa/command";
 
 const ROOT = new URL("..", import.meta.url).pathname;
 const SCAN_ROOTS = ["packages", "services", "apps"];
@@ -90,27 +91,29 @@ export function scanTree(rootDir = ROOT) {
   return all;
 }
 
-function main() {
-  const violations = scanTree();
-  diagnostics.info("direct-time-access-guard", "\nDirect time-access guard");
-  diagnostics.info("progress", "=".repeat(72));
-  diagnostics.info("scanned", `  scanned: ${SCAN_ROOTS.join(", ")}`);
-  diagnostics.info("allowed", `  allowed: ${[...ALLOWED].join(", ")}`);
-  diagnostics.info("progress-2", "=".repeat(72));
-
-  if (violations.length === 0) {
-    diagnostics.info("pass-no-direct-date-timer-usage-outside-sub-rosa-time", "PASS  no direct Date/timer usage outside @sub-rosa/time.");
-    process.exit(0);
-  }
-
-  diagnostics.error("fail", `FAIL  ${violations.length} violation(s):`);
-  for (const v of violations) {
-    diagnostics.error("progress-3", `  ${v.relPath}:${v.line}  ${v.pattern}  ${v.text}`);
-  }
-  diagnostics.error("use-sub-rosa-time-systemtime-fakeclock-fakescheduler-in", "\nUse @sub-rosa/time (systemTime, FakeClock, FakeScheduler) instead.");
-  process.exit(1);
-}
-
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
-  main();
+  runCommand({
+    name: "scripts.check-direct-time-access",
+    description: "Fail when first-party code calls wall-clock or timer globals directly",
+    run(ctx) {
+      const violations = scanTree(ctx.repoRoot);
+      diagnostics.info("direct-time-access-guard", "\nDirect time-access guard");
+      diagnostics.info("progress", "=".repeat(72));
+      diagnostics.info("scanned", `  scanned: ${SCAN_ROOTS.join(", ")}`);
+      diagnostics.info("allowed", `  allowed: ${[...ALLOWED].join(", ")}`);
+      diagnostics.info("progress-2", "=".repeat(72));
+
+      if (violations.length === 0) {
+        diagnostics.info("pass-no-direct-date-timer-usage-outside-sub-rosa-time", "PASS  no direct Date/timer usage outside @sub-rosa/time.");
+        return 0;
+      }
+
+      diagnostics.error("fail", `FAIL  ${violations.length} violation(s):`);
+      for (const v of violations) {
+        diagnostics.error("progress-3", `  ${v.relPath}:${v.line}  ${v.pattern}  ${v.text}`);
+      }
+      diagnostics.error("use-sub-rosa-time-systemtime-fakeclock-fakescheduler-in", "\nUse @sub-rosa/time (systemTime, FakeClock, FakeScheduler) instead.");
+      return 1;
+    },
+  });
 }
