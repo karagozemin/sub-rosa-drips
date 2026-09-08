@@ -160,3 +160,23 @@ describe("configFromEnv failure modes", () => {
     );
   });
 });
+
+describe("RPC URL embedded credentials", () => {
+  for (const credentials of ["private-user@", ":private-password@", "private-user:private-password@", "private%2Duser:private%2Dpassword@"]) {
+    test(`rejects credential form ${credentials.indexOf(":") >= 0 ? "password" : "username"}`, () => {
+      assert.throws(() => configFromEnv({ ...MINIMAL_ENV, RPC_URL: `https://${credentials}rpc.example/` }), (error: unknown) => {
+        assert.ok(error instanceof AppraisalConfigError);
+        assert.equal(error.variable, "RPC_URL");
+        assert.match(error.message, /embedded credentials/);
+        assert.doesNotMatch(error.stack ?? error.message, /private-user|private-password|private%2D/);
+        assert.equal(error.cause, undefined);
+        return true;
+      });
+    });
+  }
+  for (const RPC_URL of ["http://localhost:8000", "https://rpc.example/path"]) {
+    test(`accepts credential-free ${RPC_URL}`, () => {
+      assert.equal(configFromEnv({ ...MINIMAL_ENV, RPC_URL }).rpcUrl, RPC_URL);
+    });
+  }
+});
