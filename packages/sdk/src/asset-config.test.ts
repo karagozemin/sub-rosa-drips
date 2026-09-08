@@ -19,6 +19,18 @@ describe("validateAssetConfig - valid fixtures", () => {
     assert.equal(result.decimals, 7);
   });
 
+  it("accepts native config with boundary 0 decimals", () => {
+    const result = validateAssetConfig({ type: "native", decimals: 0 });
+    assert.equal(result.type, "native");
+    assert.equal(result.decimals, 0);
+  });
+
+  it("accepts native config with boundary 7 decimals", () => {
+    const result = validateAssetConfig({ type: "native", decimals: 7 });
+    assert.equal(result.type, "native");
+    assert.equal(result.decimals, 7);
+  });
+
   it("accepts full SAC USDC config", () => {
     const result = validateAssetConfig(ASSET_FIXTURES.valid.sac);
     assert.equal(result.type, "sac");
@@ -33,6 +45,26 @@ describe("validateAssetConfig - valid fixtures", () => {
     assert.equal(result.type, "sac");
     assert.equal(result.contractId, ASSET_FIXTURES.valid.sacMinimal.contractId);
     assert.equal(result.code, undefined);
+  });
+
+  it("accepts SAC config with boundary 0 decimals", () => {
+    const result = validateAssetConfig({
+      type: "sac",
+      contractId: ASSET_FIXTURES.valid.sacMinimal.contractId,
+      decimals: 0,
+    });
+    assert.equal(result.type, "sac");
+    assert.equal(result.decimals, 0);
+  });
+
+  it("accepts SAC config with boundary 18 decimals", () => {
+    const result = validateAssetConfig({
+      type: "sac",
+      contractId: ASSET_FIXTURES.valid.sacMinimal.contractId,
+      decimals: 18,
+    });
+    assert.equal(result.type, "sac");
+    assert.equal(result.decimals, 18);
   });
 
   it("accepts SAC config with metadata", () => {
@@ -85,6 +117,28 @@ describe("validateAssetConfig - invalid fixtures", () => {
       (e: AssetConfigError) => {
         assert.equal(e.field, "contractId");
         assert.match(e.message, /contractId is required/);
+        return true;
+      },
+    );
+  });
+
+  it("rejects native decimals exceeding MAX_STROOPS_DECIMALS", () => {
+    assert.throws(
+      () => validateAssetConfig(ASSET_FIXTURES.invalid.nativeInvalidDecimals),
+      (e: AssetConfigError) => {
+        assert.equal(e.field, "decimals");
+        assert.match(e.message, /decimals must be 0-7/);
+        return true;
+      },
+    );
+  });
+
+  it("rejects native negative decimals", () => {
+    assert.throws(
+      () => validateAssetConfig({ type: "native", decimals: -1 }),
+      (e: AssetConfigError) => {
+        assert.equal(e.field, "decimals");
+        assert.match(e.message, /decimals must be 0-7/);
         return true;
       },
     );

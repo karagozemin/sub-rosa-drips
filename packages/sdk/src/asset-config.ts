@@ -129,7 +129,8 @@ export function validateAssetConfig(
 
   const decimals = validateNumber(raw.decimals, "decimals");
   if (decimals !== undefined) {
-    const maxDecimals = type === "native" ? MAX_STROOPS_DECIMALS : MAX_TOKEN_DECIMALS;
+    const maxDecimals =
+      type === "native" ? MAX_STROOPS_DECIMALS : MAX_TOKEN_DECIMALS;
     if (decimals < 0 || decimals > maxDecimals) {
       throw new AssetConfigError(
         "decimals",
@@ -215,6 +216,10 @@ export const ASSET_FIXTURES = {
       type: "sac",
       contractId: "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4",
       decimals: 255,
+    },
+    nativeInvalidDecimals: {
+      type: "native",
+      decimals: 8,
     },
     negativeDecimals: {
       type: "sac",
