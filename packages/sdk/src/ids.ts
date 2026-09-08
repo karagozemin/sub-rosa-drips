@@ -7,11 +7,14 @@ function toTrimmedString(value: string | undefined): string | undefined {
 }
 
 export function normalizeRoundId(value: string | number | bigint): bigint {
-  if (typeof value === "bigint") return value;
+  if (typeof value === "bigint") {
+    if (value < 1n) throw new Error("roundId must be a positive integer");
+    return value;
+  }
 
   if (typeof value === "number") {
-    if (!Number.isInteger(value)) {
-      throw new Error(`roundId must be an integer, got ${JSON.stringify(value)}`);
+    if (!Number.isSafeInteger(value) || value < 1) {
+      throw new Error(`roundId must be a positive safe integer, got ${JSON.stringify(value)}`);
     }
     return BigInt(value);
   }
