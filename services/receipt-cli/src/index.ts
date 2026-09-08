@@ -11,8 +11,13 @@ function usage(): never {
   console.error(`
 Usage:
   receipt-cli export <roundId>             Fetch receipt from RPC (uses env config)
-  receipt-cli verify <receipt.json>        Verify a local receipt file
+  receipt-cli verify <receipt.json> [--json] [--verify-artifact-checksum <artifact-file>]
   receipt-cli redact <receipt.json> [out]  Redact sensitive fields for public demo
+
+Options for "verify":
+  --json                                  Print machine-readable verification output
+  --verify-artifact-checksum <artifact-file>
+                                          Verify the checksum of the required artifact file
 
 Environment for "export":
   RPC_URL                  Soroban RPC endpoint (default: https://soroban-testnet.stellar.org)
