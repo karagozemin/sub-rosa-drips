@@ -229,7 +229,7 @@ export async function buildKeeperStatus(source: BuildStatusSource): Promise<Keep
   } = source;
 
   const { clock } = resolveTimeContext(systemTime, source.time);
-  const health = await checkHealth(reader, drand, clock);
+  const health = await checkHealth(reader, drand, clock, source.logger);
   const nowMs = clock.nowMs();
   const startedAt = epochMs ?? nowMs;
   const watched = storeRounds();
