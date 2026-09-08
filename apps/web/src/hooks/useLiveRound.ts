@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Sub Rosa contributors
 import { useEffect, useState } from "react";
 import type { Round, BidState } from "@sub-rosa/sdk";
+import { getErrorMessage } from "@sub-rosa/errors";
 import { useTime } from "../lib/time";
 
 const RPC = import.meta.env.VITE_RPC_URL ?? "https://soroban-testnet.stellar.org";
@@ -48,7 +49,7 @@ export function useLiveRound(enabled: boolean, pollMs = 12_000) {
           setError(null);
         }
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : String(e));
+        if (!cancelled) setError(getErrorMessage(e));
       }
     }
 

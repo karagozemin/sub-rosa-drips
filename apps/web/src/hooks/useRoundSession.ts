@@ -7,6 +7,7 @@ import {
   requestAccess,
 } from "@stellar/freighter-api";
 import type { BidState, Round } from "@sub-rosa/sdk";
+import { getErrorMessage } from "@sub-rosa/errors";
 import {
   fetchRoundSignature,
   generateAuditorKeypair,
@@ -163,7 +164,7 @@ export function useRoundSession(active: UseCase) {
       toast.dismiss(workingId);
       toast.push("success", "Wallet connected", netMsg);
     } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
+      const msg = getErrorMessage(error);
       setWalletStatus(msg);
       setStatus("error");
       toast.dismiss(workingId);

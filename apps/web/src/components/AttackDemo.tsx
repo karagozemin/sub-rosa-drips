@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Sub Rosa contributors
 import { useState } from "react";
+import { getErrorMessage } from "@sub-rosa/errors";
 import type { AttackStep } from "../lib/demoTypes";
 import { useToast } from "../ui/Toast";
 
@@ -44,7 +45,7 @@ export function AttackDemo() {
         `Seal-off leaks early · seal-on waits for R=${res.revealRound.toLocaleString()}`,
       );
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
+      const msg = getErrorMessage(e);
       setErr(msg);
       toast.dismiss(workingId);
       toast.push("error", "Attack demo failed", msg);

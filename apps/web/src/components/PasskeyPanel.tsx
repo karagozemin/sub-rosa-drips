@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Sub Rosa contributors
 import { useMemo, useState } from "react";
+import { getErrorMessage } from "@sub-rosa/errors";
 import { CAP_SAFETY_COPY } from "../demo/trace";
 import { useTime } from "../lib/time";
 import {
@@ -98,7 +99,7 @@ export function PasskeyPanel() {
       );
     } catch (e) {
       setStatus("error");
-      setMessage(e instanceof Error ? e.message : String(e));
+      setMessage(getErrorMessage(e));
     }
   }
 
@@ -124,7 +125,7 @@ export function PasskeyPanel() {
       setMessage(`Smart wallet deployed on testnet: ${created.contractId}`);
     } catch (e) {
       setStatus("error");
-      const detail = e instanceof Error ? e.message : String(e);
+      const detail = getErrorMessage(e);
       setMessage(
         `Deploy failed: ${detail}. Try again after refresh; if it persists, sponsor funding on testnet may be missing (Create passkey alone is enough for the demo).`,
       );

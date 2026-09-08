@@ -11,6 +11,7 @@
 
 import type { SubRosaClient } from "@sub-rosa/sdk";
 import type { DrandClient } from "@sub-rosa/tlock";
+import { getErrorMessage } from "@sub-rosa/errors";
 import { resolveTimeContext, systemTime, type PartialTimeContext } from "@sub-rosa/time";
 
 import {
@@ -89,7 +90,7 @@ export async function runWatchLoop(params: RunWatchLoopParams): Promise<void> {
         store.addRound(id, { contractId, network });
       }
     } catch (e) {
-      log(`watch: failed to list/discover rounds: ${e instanceof Error ? e.message : String(e)}`);
+      log(`watch: failed to list/discover rounds: ${getErrorMessage(e)}`);
     }
 
     const activeRounds = store.listRounds().filter((r) => {
@@ -143,15 +144,16 @@ export async function runWatchLoop(params: RunWatchLoopParams): Promise<void> {
           );
         }
       } catch (e) {
-        log(`[round ${roundId}] tick failed: ${e instanceof Error ? e.message : String(e)}`);
+        const errorMsg = getErrorMessage(e);
+        log(`[round ${roundId}] tick failed: ${errorMsg}`);
         settlementGuard.markRetryable(
           roundId,
-          e instanceof Error ? e.message : String(e),
+          errorMsg,
         );
         const stored = store.getRound(roundId);
         store.updateRound(roundId, {
           retryCount: (stored?.retryCount ?? 0) + 1,
-          lastError: e instanceof Error ? e.message : String(e),
+          lastError: errorMsg,
         });
       }
     }

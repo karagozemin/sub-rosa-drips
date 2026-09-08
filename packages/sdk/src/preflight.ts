@@ -5,6 +5,7 @@ import {
   type Result,
 } from "@stellar/stellar-sdk/contract";
 import { Errors as RoundContractErrors } from "@sub-rosa/round-bindings";
+import { getErrorMessage } from "@sub-rosa/errors";
 import { SubRosaPreflightError } from "./errors.js";
 
 export type PreflightOperation =
@@ -132,8 +133,7 @@ export function classifyPreflightBuildError(
     return error;
   }
 
-  const message =
-    error instanceof Error ? error.message : "RPC simulation request failed";
+  const message = getErrorMessage(error) || "RPC simulation request failed";
   return new SubRosaPreflightError({
     kind: "rpc_error",
     operation,

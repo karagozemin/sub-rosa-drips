@@ -9,6 +9,7 @@ import {
   TransactionBuilder,
 } from "@stellar/stellar-sdk";
 
+import { getErrorMessage } from "@sub-rosa/errors";
 import type { SubRosaClient } from "./client.js";
 import {
   MAINNET_ARTIFACTS,
@@ -356,7 +357,7 @@ export async function runMainnetReadiness(
         "rpc-reachable",
         "RPC reachable",
         "block",
-        err instanceof Error ? err.message : String(err),
+        getErrorMessage(err),
       ),
     );
   }
@@ -392,7 +393,7 @@ export async function runMainnetReadiness(
         "wasm-hash",
         "Artifact wasm hash",
         "block",
-        err instanceof Error ? err.message : String(err),
+        getErrorMessage(err),
       ),
     );
   }
@@ -427,7 +428,7 @@ export async function runMainnetReadiness(
           "settled-round",
           "Settled round proof",
           "block",
-          err instanceof Error ? err.message : String(err),
+          getErrorMessage(err),
         ),
       );
     }
@@ -474,7 +475,7 @@ export async function runMainnetReadiness(
           "contract-balance",
           "Contract escrow balance",
           "block",
-          err instanceof Error ? err.message : String(err),
+          getErrorMessage(err),
         ),
       );
     }
@@ -540,7 +541,7 @@ export async function runMainnetReadiness(
             id,
             label,
             "block",
-            err instanceof Error ? err.message : String(err),
+            getErrorMessage(err),
           ),
         );
       }

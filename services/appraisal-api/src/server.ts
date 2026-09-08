@@ -10,6 +10,7 @@
 
 import http from "node:http";
 
+import { getErrorMessage } from "@sub-rosa/errors";
 import { x402Facilitator } from "@x402/core/facilitator";
 import {
   x402HTTPResourceServer,
@@ -226,7 +227,7 @@ export async function buildAppraisalServer(
         },
       );
     } catch (err) {
-      send(res, 500, {}, { error: err instanceof Error ? err.message : String(err) });
+      send(res, 500, {}, { error: getErrorMessage(err) });
     }
   });
 }

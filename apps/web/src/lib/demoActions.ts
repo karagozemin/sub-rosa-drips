@@ -8,6 +8,7 @@ import {
   MandateCapError,
   usdcToStroops,
 } from "@sub-rosa/agent/mandate";
+import { getErrorMessage } from "@sub-rosa/errors";
 import {
   commitment,
   currentRound,
@@ -55,7 +56,7 @@ export function runCapSafetyDemos(): CapDemoResult[] {
       title: "Appraisal price above mandate (0.20 > cap 0.10)",
       layer: "agent (off-chain)",
       expected: "reject",
-      outcome: e instanceof MandateCapError ? e.message : String(e),
+      outcome: getErrorMessage(e),
       pass: e instanceof MandateCapError,
     });
   }

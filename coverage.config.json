@@ -8,6 +8,7 @@
     "services/keeper",
     "services/auction-template",
     "services/appraisal-api",
-    "services/agent"
+    "services/agent",
+    "packages/errors"
   ]
 }
