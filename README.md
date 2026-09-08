@@ -9,6 +9,7 @@
   <img src="./assets/sub-rosa-readme.png" width="250" alt="Sub Rosa logo" />
 </p>
 
+
 # Sub Rosa
 
 **1st Place — Hack Privacy Track, Build On Stellar Hackathon — IBW 2026**
